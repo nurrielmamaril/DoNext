@@ -42,7 +42,7 @@ function isValidEmail(email: string): boolean {
 }
 
 const FOOTER =
-  '<p style="margin-top:24px;padding-top:12px;border-top:1px solid #e5e5e5;color:#888;font-size:12px">This email was sent from DoNext, Nurriel Mamaril\'s productivity app.</p>';
+  '<p style="margin-top:24px;padding-top:12px;border-top:1px solid #e5e5e5;color:#888;font-size:12px">This email was sent from DoNext, Nurriel Mamaril\'s proprietary productivity software.</p>';
 
 // This function is called directly from the browser (unlike send-due-reminders,
 // which is only ever called server-side by pg_cron), so it needs CORS headers
