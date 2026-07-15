@@ -51,9 +51,20 @@ interface TaskItemProps {
   onEdit: () => void;
   showListBadge?: boolean;
   draggable?: boolean;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }
 
-export function TaskItem({ task, onEdit, showListBadge = true, draggable = false }: TaskItemProps) {
+export function TaskItem({
+  task,
+  onEdit,
+  showListBadge = true,
+  draggable = false,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
+}: TaskItemProps) {
   const completeTask = useCompleteTask();
   const deleteTask = useDeleteTask();
   const restoreTask = useRestoreTask();
@@ -138,15 +149,24 @@ export function TaskItem({ task, onEdit, showListBadge = true, draggable = false
         priorityBorderClass(task.priority)
       )}
     >
-      {draggable && (
-        <button
-          {...attributes}
-          {...listeners}
-          className="mt-0.5 cursor-grab touch-none self-start text-muted-foreground opacity-0 group-hover:opacity-100"
-          aria-label="Drag to reorder"
-        >
-          <GripVertical className="size-3.5" />
-        </button>
+      {selectionMode ? (
+        <Checkbox
+          checked={selected}
+          onCheckedChange={() => onToggleSelect?.()}
+          className="mt-0.5"
+          aria-label={selected ? "Deselect task" : "Select task"}
+        />
+      ) : (
+        draggable && (
+          <button
+            {...attributes}
+            {...listeners}
+            className="mt-0.5 cursor-grab touch-none self-start text-muted-foreground opacity-0 group-hover:opacity-100"
+            aria-label="Drag to reorder"
+          >
+            <GripVertical className="size-3.5" />
+          </button>
+        )
       )}
       <Checkbox
         checked={isCompleted}
@@ -155,7 +175,10 @@ export function TaskItem({ task, onEdit, showListBadge = true, draggable = false
         className="mt-0.5"
         aria-label={isCompleted ? "Mark as not started" : "Mark as complete"}
       />
-      <button className="min-w-0 flex-1 text-left" onClick={onEdit}>
+      <button
+        className="min-w-0 flex-1 text-left"
+        onClick={selectionMode ? () => onToggleSelect?.() : onEdit}
+      >
         <p className={cn("truncate text-sm", isCompleted && "text-muted-foreground line-through")}>
           {task.title}
         </p>
@@ -203,44 +226,46 @@ export function TaskItem({ task, onEdit, showListBadge = true, draggable = false
           {subtaskDone}/{subtaskTotal}
         </span>
       )}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="opacity-0 group-hover:opacity-100"
-              aria-label="Task actions"
-            />
-          }
-        >
-          <MoreHorizontal className="size-3.5" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={onEdit}>
-            <Pencil className="size-3.5" /> Edit
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleDuplicate}>
-            <Copy className="size-3.5" /> Duplicate
-          </DropdownMenuItem>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <FolderInput className="size-3.5" /> Move to
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              <DropdownMenuItem onClick={() => handleMove(null)}>Inbox</DropdownMenuItem>
-              {lists?.map((list) => (
-                <DropdownMenuItem key={list.id} onClick={() => handleMove(list.id)}>
-                  {list.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-          <DropdownMenuItem variant="destructive" onClick={handleDelete}>
-            <Trash2 className="size-3.5" /> Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {!selectionMode && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="opacity-0 group-hover:opacity-100"
+                aria-label="Task actions"
+              />
+            }
+          >
+            <MoreHorizontal className="size-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onEdit}>
+              <Pencil className="size-3.5" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleDuplicate}>
+              <Copy className="size-3.5" /> Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FolderInput className="size-3.5" /> Move to
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem onClick={() => handleMove(null)}>Inbox</DropdownMenuItem>
+                {lists?.map((list) => (
+                  <DropdownMenuItem key={list.id} onClick={() => handleMove(list.id)}>
+                    {list.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuItem variant="destructive" onClick={handleDelete}>
+              <Trash2 className="size-3.5" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 }

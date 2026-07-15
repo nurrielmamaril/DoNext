@@ -97,3 +97,14 @@ export function useDeleteNote(listId: string | null) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: notesKey(listId) }),
   });
 }
+
+export function useBulkDeleteNotes(listId: string | null) {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(ids.map((id) => supabase.from("notes").delete().eq("id", id)));
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: notesKey(listId) }),
+  });
+}

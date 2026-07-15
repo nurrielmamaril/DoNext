@@ -1,8 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { ClipboardList, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   DndContext,
   closestCenter,
@@ -25,6 +28,9 @@ import { TaskEditorDialog, type EditableTask } from "@/components/tasks/TaskEdit
 import {
   useTasksQuery,
   useReorderTasks,
+  useBulkDeleteTasks,
+  useBulkRestoreTasks,
+  useBulkSetTaskStatus,
   type TaskFilter,
   type StatusFilter,
 } from "@/lib/hooks/useTasks";
@@ -86,12 +92,19 @@ export function TaskList({
   const [search, setSearch] = useState("");
   const [editingTask, setEditingTask] = useState<EditableTask | null | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const reorderTasks = useReorderTasks();
+  const bulkDeleteTasks = useBulkDeleteTasks();
+  const bulkRestoreTasks = useBulkRestoreTasks();
+  const bulkSetTaskStatus = useBulkSetTaskStatus();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleSearchChange(value: string) {
     setSearchInput(value);
+    setSelectedIds(new Set());
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => setSearch(value), 300);
   }
@@ -101,7 +114,11 @@ export function TaskList({
   const { data: tasks, isLoading } = useTasksQuery(effectiveFilter);
 
   const sorted = useMemo(() => sortTasks((tasks as TaskRow[]) ?? [], sortKey), [tasks, sortKey]);
-  const draggable = sortKey === "position";
+  const draggable = sortKey === "position" && !selectionMode;
+  const selectedTasks = useMemo(
+    () => sorted.filter((t) => selectedIds.has(t.id)),
+    [sorted, selectedIds]
+  );
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -110,6 +127,57 @@ export function TaskList({
     const newIndex = sorted.findIndex((t) => t.id === over.id);
     const reordered = arrayMove(sorted, oldIndex, newIndex);
     reorderTasks.mutate(reordered.map((t, i) => ({ id: t.id, position: i })));
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    setSelectedIds(new Set(sorted.map((t) => t.id)));
+  }
+
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }
+
+  async function handleBulkComplete(complete: boolean) {
+    const ids = selectedTasks.map((t) => t.id);
+    await bulkSetTaskStatus.mutateAsync({
+      tasks: selectedTasks.map((t) => ({
+        id: t.id,
+        list_id: t.list_id,
+        title: t.title,
+        description: t.description,
+        priority: t.priority,
+        due_date: t.due_date,
+        due_time: t.due_time,
+        is_recurring: t.is_recurring,
+        recurrence_rule: t.recurrence_rule as unknown as RecurrenceRule | null,
+      })),
+      complete,
+    });
+    setSelectedIds(new Set());
+    toast.success(`${ids.length} task${ids.length === 1 ? "" : "s"} ${complete ? "completed" : "reopened"}`);
+  }
+
+  async function handleBulkDelete() {
+    const ids = selectedTasks.map((t) => t.id);
+    await bulkDeleteTasks.mutateAsync(ids);
+    setBulkDeleteConfirmOpen(false);
+    setSelectedIds(new Set());
+    toast(`${ids.length} task${ids.length === 1 ? "" : "s"} deleted`, {
+      action: {
+        label: "Undo",
+        onClick: () => bulkRestoreTasks.mutate(ids),
+      },
+    });
   }
 
   function openEdit(task: TaskRow) {
@@ -131,58 +199,107 @@ export function TaskList({
   return (
     <div className={fullWidth ? "w-full" : "mx-auto max-w-2xl"}>
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-6 pb-3">
-        <h2 className="font-heading text-xl">{title}</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          {showStatusFilter && (
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Search..."
-                className="h-7 w-40 pl-7 text-[0.8rem]"
-              />
+        {selectionMode ? (
+          <>
+            <span className="text-sm font-medium">{selectedTasks.length} selected</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" variant="outline" onClick={selectAll}>
+                Select all
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={selectedTasks.length === 0}
+                onClick={() => handleBulkComplete(true)}
+              >
+                Mark complete
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={selectedTasks.length === 0}
+                onClick={() => handleBulkComplete(false)}
+              >
+                Mark incomplete
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={selectedTasks.length === 0}
+                onClick={() => setBulkDeleteConfirmOpen(true)}
+              >
+                Delete
+              </Button>
+              <Button size="sm" variant="ghost" onClick={exitSelectionMode}>
+                Done
+              </Button>
             </div>
-          )}
-          {showStatusFilter && (
-            <Select
-              items={{ active: "Active", completed: "Completed", all: "All" }}
-              value={statusFilter}
-              onValueChange={(v) => setStatusFilter(v as StatusFilter)}
-            >
-              <SelectTrigger size="sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="all">All</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-          <Select
-            items={{
-              position: "Default order",
-              due_date: "Due date",
-              priority: "Priority",
-              status: "Status",
-              created_at: "Date created",
-            }}
-            value={sortKey}
-            onValueChange={(v) => setSortKey(v as SortKey)}
-          >
-            <SelectTrigger size="sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="position">Default order</SelectItem>
-              <SelectItem value="due_date">Due date</SelectItem>
-              <SelectItem value="priority">Priority</SelectItem>
-              <SelectItem value="status">Status</SelectItem>
-              <SelectItem value="created_at">Date created</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          </>
+        ) : (
+          <>
+            <h2 className="font-heading text-xl">{title}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              {showStatusFilter && (
+                <div className="relative">
+                  <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchInput}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    placeholder="Search..."
+                    className="h-7 w-40 pl-7 text-[0.8rem]"
+                  />
+                </div>
+              )}
+              {showStatusFilter && (
+                <Select
+                  items={{ active: "Active", completed: "Completed", all: "All" }}
+                  value={statusFilter}
+                  onValueChange={(v) => {
+                    setStatusFilter(v as StatusFilter);
+                    setSelectedIds(new Set());
+                  }}
+                >
+                  <SelectTrigger size="sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="all">All</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              <Select
+                items={{
+                  position: "Default order",
+                  due_date: "Due date",
+                  priority: "Priority",
+                  status: "Status",
+                  created_at: "Date created",
+                }}
+                value={sortKey}
+                onValueChange={(v) => {
+                  setSortKey(v as SortKey);
+                  setSelectedIds(new Set());
+                }}
+              >
+                <SelectTrigger size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="position">Default order</SelectItem>
+                  <SelectItem value="due_date">Due date</SelectItem>
+                  <SelectItem value="priority">Priority</SelectItem>
+                  <SelectItem value="status">Status</SelectItem>
+                  <SelectItem value="created_at">Date created</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button size="sm" variant="outline" onClick={() => setSelectionMode(true)}>
+                Select
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="rounded-lg border bg-card">
@@ -208,6 +325,9 @@ export function TaskList({
                 showListBadge={showListBadge}
                 onEdit={() => openEdit(task)}
                 draggable={draggable}
+                selectionMode={selectionMode}
+                selected={selectedIds.has(task.id)}
+                onToggleSelect={() => toggleSelect(task.id)}
               />
             ))}
           </SortableContext>
@@ -222,6 +342,14 @@ export function TaskList({
         }}
         task={editingTask}
         defaultListId={defaultListId}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteConfirmOpen}
+        onOpenChange={setBulkDeleteConfirmOpen}
+        title={`Delete ${selectedTasks.length} task${selectedTasks.length === 1 ? "" : "s"}?`}
+        description="This can't be undone."
+        onConfirm={handleBulkDelete}
       />
     </div>
   );

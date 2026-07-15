@@ -281,3 +281,88 @@ export function useReorderTasks() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
   });
 }
+
+export function useBulkDeleteTasks() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(
+        ids.map((id) =>
+          supabase.from("tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id)
+        )
+      );
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+}
+
+export function useBulkRestoreTasks() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      await Promise.all(
+        ids.map((id) => supabase.from("tasks").update({ deleted_at: null }).eq("id", id))
+      );
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+}
+
+export interface BulkStatusTask {
+  id: string;
+  list_id: string | null;
+  title: string;
+  description: string | null;
+  priority: TaskPriority;
+  due_date: string | null;
+  due_time: string | null;
+  is_recurring: boolean;
+  recurrence_rule: RecurrenceRule | null;
+}
+
+// Bulk complete/reopen. Mirrors useCompleteTask's per-task behavior (including
+// spawning the next occurrence for recurring tasks) so bulk-completing a mix
+// of tasks behaves identically to completing them one at a time.
+export function useBulkSetTaskStatus() {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ tasks, complete }: { tasks: BulkStatusTask[]; complete: boolean }) => {
+      const { data: userData } = complete
+        ? await supabase.auth.getUser()
+        : { data: null };
+      await Promise.all(
+        tasks.map(async (task) => {
+          const { error } = await supabase
+            .from("tasks")
+            .update({
+              status: complete ? "completed" : "not_started",
+              completed_at: complete ? new Date().toISOString() : null,
+            })
+            .eq("id", task.id);
+          if (error) throw error;
+
+          if (complete && task.is_recurring && task.recurrence_rule && task.due_date && userData?.user) {
+            const nextDueDate = computeNextDueDate(task.due_date, task.recurrence_rule);
+            await supabase.from("tasks").insert({
+              user_id: userData.user.id,
+              list_id: task.list_id,
+              title: task.title,
+              description: task.description,
+              priority: task.priority,
+              status: "not_started",
+              due_date: nextDueDate,
+              due_time: task.due_time,
+              is_recurring: true,
+              recurrence_rule: task.recurrence_rule,
+              recurrence_parent_id: task.id,
+            });
+          }
+        })
+      );
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+}

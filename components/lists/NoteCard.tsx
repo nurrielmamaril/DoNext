@@ -6,6 +6,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ChevronDown, ChevronRight, GripVertical, Palette, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -22,7 +23,21 @@ const SAVE_DELAY_MS = 800;
 
 type NoteRow = Database["public"]["Tables"]["notes"]["Row"];
 
-export function NoteCard({ note, listId }: { note: NoteRow; listId: string | null }) {
+interface NoteCardProps {
+  note: NoteRow;
+  listId: string | null;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+}
+
+export function NoteCard({
+  note,
+  listId,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
+}: NoteCardProps) {
   const [title, setTitle] = useState(note.title ?? "");
   const [content, setContent] = useState(note.content);
   const [expanded, setExpanded] = useState(!note.title && !note.content);
@@ -33,6 +48,7 @@ export function NoteCard({ note, listId }: { note: NoteRow; listId: string | nul
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: note.id,
+    disabled: selectionMode,
   });
 
   const dragStyle = {
@@ -90,14 +106,22 @@ export function NoteCard({ note, listId }: { note: NoteRow; listId: string | nul
       onPaste={handlePaste}
     >
       <div className="flex items-center gap-1 px-2 py-1.5">
-        <button
-          {...attributes}
-          {...listeners}
-          className="cursor-grab touch-none text-muted-foreground opacity-0 group-hover:opacity-100"
-          aria-label="Drag to reorder"
-        >
-          <GripVertical className="size-3.5" />
-        </button>
+        {selectionMode ? (
+          <Checkbox
+            checked={selected}
+            onCheckedChange={() => onToggleSelect?.()}
+            aria-label={selected ? "Deselect note" : "Select note"}
+          />
+        ) : (
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab touch-none text-muted-foreground opacity-0 group-hover:opacity-100"
+            aria-label="Drag to reorder"
+          >
+            <GripVertical className="size-3.5" />
+          </button>
+        )}
         <Button
           variant="ghost"
           size="icon-xs"
@@ -145,15 +169,17 @@ export function NoteCard({ note, listId }: { note: NoteRow; listId: string | nul
             ))}
           </PopoverContent>
         </Popover>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100"
-          aria-label="Delete note"
-          onClick={() => setConfirmDelete(true)}
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
+        {!selectionMode && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100"
+            aria-label="Delete note"
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        )}
       </div>
       {expanded && (
         <div className="space-y-2 border-t px-2 py-2">
