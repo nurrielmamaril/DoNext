@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronDown, ChevronRight, GripVertical, Palette, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, GripVertical, Mail, Palette, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AttachmentList } from "@/components/attachments/AttachmentList";
+import { SendEmailDialog } from "@/components/tasks/SendEmailDialog";
 import { useUpdateNote, useDeleteNote } from "@/lib/hooks/useNotes";
 import { useUploadAttachment } from "@/lib/hooks/useAttachments";
 import { extractImageFromClipboard } from "@/lib/utils/clipboard";
@@ -42,6 +43,7 @@ export function NoteCard({
   const [content, setContent] = useState(note.content);
   const [expanded, setExpanded] = useState(!note.title && !note.content);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [sendEmailOpen, setSendEmailOpen] = useState(false);
   const updateNote = useUpdateNote(listId);
   const deleteNote = useDeleteNote(listId);
   const uploadAttachment = useUploadAttachment({ noteId: note.id });
@@ -174,6 +176,17 @@ export function NoteCard({
             variant="ghost"
             size="icon-xs"
             className="shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100"
+            aria-label="Send note via email"
+            onClick={() => setSendEmailOpen(true)}
+          >
+            <Mail className="size-3.5" />
+          </Button>
+        )}
+        {!selectionMode && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100"
             aria-label="Delete note"
             onClick={() => setConfirmDelete(true)}
           >
@@ -205,6 +218,7 @@ export function NoteCard({
         description="This can't be undone."
         onConfirm={handleDelete}
       />
+      <SendEmailDialog open={sendEmailOpen} onOpenChange={setSendEmailOpen} type="note" id={note.id} />
     </div>
   );
 }

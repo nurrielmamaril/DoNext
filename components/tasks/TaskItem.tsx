@@ -8,6 +8,7 @@ import {
   Calendar,
   Clock,
   Copy,
+  Mail,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PriorityBadge, priorityBorderClass } from "@/components/tasks/PriorityBadge";
 import { StatusBadge } from "@/components/tasks/StatusBadge";
+import { SendEmailDialog } from "@/components/tasks/SendEmailDialog";
 import { formatDueDate, formatDueTime, isOverdue } from "@/lib/utils/dates";
 import { cn } from "@/lib/utils";
 import {
@@ -73,6 +75,7 @@ export function TaskItem({
   const { data: lists } = useListsQuery();
   const { data: subtasks } = useSubtasksQuery(task.id);
   const [busy, setBusy] = useState(false);
+  const [sendEmailOpen, setSendEmailOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     disabled: !draggable,
@@ -247,6 +250,9 @@ export function TaskItem({
             <DropdownMenuItem onClick={handleDuplicate}>
               <Copy className="size-3.5" /> Duplicate
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSendEmailOpen(true)}>
+              <Mail className="size-3.5" /> Send via email
+            </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <FolderInput className="size-3.5" /> Move to
@@ -266,6 +272,7 @@ export function TaskItem({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      <SendEmailDialog open={sendEmailOpen} onOpenChange={setSendEmailOpen} type="task" id={task.id} />
     </div>
   );
 }
