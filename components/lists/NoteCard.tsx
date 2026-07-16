@@ -222,7 +222,13 @@ export function NoteCard({
         description="This can't be undone."
         onConfirm={handleDelete}
       />
-      <SendEmailDialog open={sendEmailOpen} onOpenChange={setSendEmailOpen} type="note" id={note.id} />
+      <SendEmailDialog
+        open={sendEmailOpen}
+        onOpenChange={setSendEmailOpen}
+        type="note"
+        id={note.id}
+        defaultSubject={`Note: ${title || "Untitled"}`}
+      />
     </div>
   );
 }

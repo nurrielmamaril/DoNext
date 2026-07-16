@@ -272,7 +272,13 @@ export function TaskItem({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
-      <SendEmailDialog open={sendEmailOpen} onOpenChange={setSendEmailOpen} type="task" id={task.id} />
+      <SendEmailDialog
+        open={sendEmailOpen}
+        onOpenChange={setSendEmailOpen}
+        type="task"
+        id={task.id}
+        defaultSubject={`Task: ${task.title}`}
+      />
     </div>
   );
 }

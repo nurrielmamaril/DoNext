@@ -83,14 +83,14 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Email sending isn't configured" }, 500);
   }
 
-  let body: { type?: string; id?: string; to?: string };
+  let body: { type?: string; id?: string; to?: string; subject?: string };
   try {
     body = await req.json();
   } catch {
     return jsonResponse({ error: "Invalid request body" }, 400);
   }
 
-  const { type, id, to } = body;
+  const { type, id, to, subject: customSubject } = body;
   if (type !== "task" && type !== "note") {
     return jsonResponse({ error: "type must be \"task\" or \"note\"" }, 400);
   }
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
   if (type === "task") {
     const { data: task, error: taskError } = await supabase
       .from("tasks")
-      .select("*, lists(name)")
+      .select("*")
       .eq("id", id)
       .is("deleted_at", null)
       .single();
@@ -118,7 +118,6 @@ Deno.serve(async (req) => {
       .eq("task_id", id)
       .order("position", { ascending: true });
 
-    const listName = (task as unknown as { lists: { name: string } | null }).lists?.name;
     const dueLine = task.due_date
       ? `${formatDueDate(task.due_date)}${task.due_time ? ` at ${formatDueTime(task.due_time)}` : ""}`
       : null;
@@ -129,7 +128,6 @@ Deno.serve(async (req) => {
       `<p><strong>Priority:</strong> ${priorityLabels[task.priority] ?? task.priority}</p>`,
       `<p><strong>Status:</strong> ${statusLabels[task.status] ?? task.status}</p>`,
     ];
-    if (listName) lines.push(`<p><strong>Category:</strong> ${listName}</p>`);
     if (dueLine) lines.push(`<p><strong>Due:</strong> ${dueLine}</p>`);
     if (task.is_recurring) lines.push(`<p><strong>Recurring:</strong> Yes</p>`);
     if (task.description) {
@@ -145,21 +143,23 @@ Deno.serve(async (req) => {
   } else {
     const { data: note, error: noteError } = await supabase
       .from("notes")
-      .select("*, lists(name)")
+      .select("*")
       .eq("id", id)
       .single();
     if (noteError || !note) {
       return jsonResponse({ error: "Note not found" }, 404);
     }
 
-    const listName = (note as unknown as { lists: { name: string } | null }).lists?.name;
     subject = `Note: ${note.title || "Untitled"}`;
     const lines: string[] = [`<h2 style="margin:0 0 12px">${note.title || "Untitled"}</h2>`];
-    if (listName) lines.push(`<p><strong>Category:</strong> ${listName}</p>`);
     const rawContent = note.content || "";
     const looksLikeHtml = /<(p|h[1-6]|ul|ol|li|strong|em|b|i|u|br|blockquote|a)[\s/>]/i.test(rawContent);
     lines.push(looksLikeHtml ? rawContent : `<p>${rawContent.replace(/\n/g, "<br>")}</p>`);
     html = lines.join("\n") + FOOTER;
+  }
+
+  if (customSubject && customSubject.trim()) {
+    subject = customSubject.trim();
   }
 
   const res = await fetch("https://api.resend.com/emails", {

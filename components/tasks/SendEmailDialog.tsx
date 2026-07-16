@@ -21,17 +21,20 @@ interface SendEmailDialogProps {
   onOpenChange: (open: boolean) => void;
   type: "task" | "note";
   id: string;
+  defaultSubject: string;
 }
 
-export function SendEmailDialog({ open, onOpenChange, type, id }: SendEmailDialogProps) {
+export function SendEmailDialog({ open, onOpenChange, type, id, defaultSubject }: SendEmailDialogProps) {
   const [to, setTo] = useState("");
+  const [subject, setSubject] = useState("");
   const sendEmail = useSendItemEmail();
 
   async function handleSend() {
     try {
-      await sendEmail.mutateAsync({ type, id, to });
+      await sendEmail.mutateAsync({ type, id, to, subject: subject.trim() || undefined });
       toast.success(`${type === "task" ? "Task" : "Note"} sent to ${to}`);
       setTo("");
+      setSubject("");
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't send email");
@@ -43,7 +46,10 @@ export function SendEmailDialog({ open, onOpenChange, type, id }: SendEmailDialo
       open={open}
       onOpenChange={(next) => {
         onOpenChange(next);
-        if (!next) setTo("");
+        if (!next) {
+          setTo("");
+          setSubject("");
+        }
       }}
     >
       <DialogContent>
@@ -60,6 +66,16 @@ export function SendEmailDialog({ open, onOpenChange, type, id }: SendEmailDialo
             value={to}
             onChange={(e) => setTo(e.target.value)}
             placeholder="someone@example.com"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="send-email-subject">Subject (optional)</Label>
+          <Input
+            id="send-email-subject"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder={defaultSubject}
           />
         </div>
 
