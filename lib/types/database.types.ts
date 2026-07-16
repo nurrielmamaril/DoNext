@@ -311,6 +311,8 @@ export interface Database {
           method: ReminderMethod;
           status: ReminderStatus;
           snoozed_until: string | null;
+          is_recurring: boolean;
+          recurrence_rule: { unit: "day" | "week" | "month"; interval: number } | null;
           created_at: string;
         };
         Insert: {
@@ -321,6 +323,8 @@ export interface Database {
           method?: ReminderMethod;
           status?: ReminderStatus;
           snoozed_until?: string | null;
+          is_recurring?: boolean;
+          recurrence_rule?: { unit: "day" | "week" | "month"; interval: number } | null;
           created_at?: string;
         };
         Update: {
@@ -331,6 +335,8 @@ export interface Database {
           method?: ReminderMethod;
           status?: ReminderStatus;
           snoozed_until?: string | null;
+          is_recurring?: boolean;
+          recurrence_rule?: { unit: "day" | "week" | "month"; interval: number } | null;
           created_at?: string;
         };
         Relationships: [

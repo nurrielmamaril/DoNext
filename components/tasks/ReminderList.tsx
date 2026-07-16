@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Mail, Plus, X } from "lucide-react";
+import { Mail, Plus, Repeat, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,6 +19,8 @@ import {
   useSnoozeReminder,
   type SnoozeOption,
 } from "@/lib/hooks/useReminders";
+import { ReminderRecurrencePicker } from "@/components/tasks/ReminderRecurrencePicker";
+import { describeReminderRecurrence, type ReminderRecurrenceRule } from "@/lib/utils/reminderRecurrence";
 
 const statusStyles: Record<string, string> = {
   pending: "text-muted-foreground",
@@ -40,12 +42,19 @@ export function ReminderList({ taskId }: { taskId: string }) {
   const deleteReminder = useDeleteReminder(taskId);
   const snoozeReminder = useSnoozeReminder(taskId);
   const [newDateTime, setNewDateTime] = useState("");
+  const [recurrenceRule, setRecurrenceRule] = useState<ReminderRecurrenceRule | null>(null);
 
   async function handleAdd() {
     if (!newDateTime) return;
     try {
-      await createReminder.mutateAsync({ remind_at: new Date(newDateTime).toISOString(), method: "email" });
+      await createReminder.mutateAsync({
+        remind_at: new Date(newDateTime).toISOString(),
+        method: "email",
+        is_recurring: recurrenceRule !== null,
+        recurrence_rule: recurrenceRule,
+      });
       setNewDateTime("");
+      setRecurrenceRule(null);
       toast.success("Reminder set");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't set reminder");
@@ -86,7 +95,15 @@ export function ReminderList({ taskId }: { taskId: string }) {
                 className="group flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm"
               >
                 <Mail className="size-3.5 shrink-0 text-muted-foreground" aria-label="Email" />
-                <span className="flex-1">{format(new Date(when), "MMM d, yyyy 'at' h:mm a")}</span>
+                <span className="flex-1">
+                  {format(new Date(when), "MMM d, yyyy 'at' h:mm a")}
+                  {reminder.is_recurring && reminder.recurrence_rule && (
+                    <span className="ml-1.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Repeat className="size-3" />
+                      {describeReminderRecurrence(reminder.recurrence_rule)}
+                    </span>
+                  )}
+                </span>
                 <span className={`text-xs capitalize ${statusStyles[reminder.status]}`}>
                   {reminder.status}
                 </span>
@@ -135,6 +152,9 @@ export function ReminderList({ taskId }: { taskId: string }) {
         <Button type="button" size="sm" variant="outline" onClick={handleAdd} disabled={!newDateTime}>
           Add
         </Button>
+      </div>
+      <div className="pl-6">
+        <ReminderRecurrencePicker rule={recurrenceRule} onChange={setRecurrenceRule} />
       </div>
       <p className="pl-6 text-xs text-muted-foreground">Reminders are sent to your email.</p>
     </div>

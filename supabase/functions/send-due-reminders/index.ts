@@ -3,7 +3,16 @@
 // chosen method (browser push or email), then marks it as sent.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
-import { format, isToday, isTomorrow, isYesterday, parseISO } from "npm:date-fns@4.4.0";
+import {
+  addDays,
+  addWeeks,
+  addMonths,
+  format,
+  isToday,
+  isTomorrow,
+  isYesterday,
+  parseISO,
+} from "npm:date-fns@4.4.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -27,6 +36,21 @@ type TaskInfo = {
   due_date: string | null;
   due_time: string | null;
 };
+
+type ReminderRecurrenceRule = { unit: "day" | "week" | "month"; interval: number };
+
+// Duplicated from lib/utils/reminderRecurrence.ts — edge functions can't
+// import from lib/, same reasoning as the duplicated HTML-detection regex.
+function computeNextRemindAt(currentRemindAt: string, rule: ReminderRecurrenceRule): string {
+  const current = parseISO(currentRemindAt);
+  const next =
+    rule.unit === "day"
+      ? addDays(current, rule.interval)
+      : rule.unit === "week"
+        ? addWeeks(current, rule.interval)
+        : addMonths(current, rule.interval);
+  return next.toISOString();
+}
 
 function formatDueDate(dateStr: string): string {
   const date = parseISO(dateStr);
@@ -140,7 +164,7 @@ Deno.serve(async (req) => {
   const { data: dueReminders, error } = await supabase
     .from("reminders")
     .select(
-      "id, user_id, task_id, status, method, remind_at, snoozed_until, tasks(title, description, due_date, due_time)"
+      "id, user_id, task_id, status, method, remind_at, snoozed_until, is_recurring, recurrence_rule, tasks(title, description, due_date, due_time)"
     )
     .or(
       `and(status.eq.pending,remind_at.lte.${now}),and(status.eq.snoozed,snoozed_until.lte.${now})`
@@ -173,7 +197,18 @@ Deno.serve(async (req) => {
 
     if (ok) {
       sent++;
-      await supabase.from("reminders").update({ status: "sent" }).eq("id", reminder.id);
+      if (reminder.is_recurring && reminder.recurrence_rule) {
+        const nextRemindAt = computeNextRemindAt(
+          reminder.remind_at,
+          reminder.recurrence_rule as ReminderRecurrenceRule
+        );
+        await supabase
+          .from("reminders")
+          .update({ remind_at: nextRemindAt, status: "pending", snoozed_until: null })
+          .eq("id", reminder.id);
+      } else {
+        await supabase.from("reminders").update({ status: "sent" }).eq("id", reminder.id);
+      }
     } else {
       failed++;
     }

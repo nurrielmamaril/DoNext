@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { ReminderMethod } from "@/lib/types/database.types";
+import type { ReminderRecurrenceRule } from "@/lib/utils/reminderRecurrence";
 
 function remindersKey(taskId: string) {
   return ["reminders", taskId];
@@ -51,15 +52,26 @@ export function useCreateReminder(taskId: string) {
     mutationFn: async ({
       remind_at,
       method = "email",
+      is_recurring = false,
+      recurrence_rule = null,
     }: {
       remind_at: string;
       method?: ReminderMethod;
+      is_recurring?: boolean;
+      recurrence_rule?: ReminderRecurrenceRule | null;
     }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not signed in");
       const { data, error } = await supabase
         .from("reminders")
-        .insert({ task_id: taskId, user_id: userData.user.id, remind_at, method })
+        .insert({
+          task_id: taskId,
+          user_id: userData.user.id,
+          remind_at,
+          method,
+          is_recurring,
+          recurrence_rule,
+        })
         .select()
         .single();
       if (error) throw error;
