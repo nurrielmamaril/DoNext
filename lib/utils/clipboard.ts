@@ -1,4 +1,4 @@
-export function extractImageFromClipboard(e: React.ClipboardEvent): File | null {
+export function extractImageFromClipboard(e: { clipboardData: DataTransfer | null }): File | null {
   const items = e.clipboardData?.items;
   if (!items) return null;
   for (let i = 0; i < items.length; i++) {

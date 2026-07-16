@@ -8,11 +8,11 @@ import { ChevronDown, ChevronRight, GripVertical, Mail, Palette, Trash2 } from "
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AttachmentList } from "@/components/attachments/AttachmentList";
 import { SendEmailDialog } from "@/components/tasks/SendEmailDialog";
+import { NoteEditor } from "@/components/lists/NoteEditor";
 import { useUpdateNote, useDeleteNote } from "@/lib/hooks/useNotes";
 import { useUploadAttachment } from "@/lib/hooks/useAttachments";
 import { extractImageFromClipboard } from "@/lib/utils/clipboard";
@@ -59,10 +59,7 @@ export function NoteCard({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  async function handlePaste(e: React.ClipboardEvent) {
-    const file = extractImageFromClipboard(e);
-    if (!file) return;
-    e.preventDefault();
+  async function handleImageFile(file: File) {
     if (!expanded) setExpanded(true);
     try {
       await uploadAttachment.mutateAsync(file);
@@ -70,6 +67,13 @@ export function NoteCard({
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't paste image");
     }
+  }
+
+  async function handlePaste(e: React.ClipboardEvent) {
+    const file = extractImageFromClipboard(e);
+    if (!file) return;
+    e.preventDefault();
+    await handleImageFile(file);
   }
 
   useEffect(() => {
@@ -196,14 +200,14 @@ export function NoteCard({
       </div>
       {expanded && (
         <div className="space-y-2 border-t px-2 py-2">
-          <Textarea
-            value={content}
-            onChange={(e) => {
-              setContent(e.target.value);
-              scheduleSave(title, e.target.value);
+          <NoteEditor
+            content={content}
+            onChange={(html) => {
+              setContent(html);
+              scheduleSave(title, html);
             }}
+            onImagePaste={handleImageFile}
             placeholder="Write a note..."
-            className="min-h-24 resize-y rounded-none border-none bg-transparent p-1 shadow-none focus-visible:ring-0"
           />
           <AttachmentList noteId={note.id} />
           <p className="px-1 text-xs text-muted-foreground">

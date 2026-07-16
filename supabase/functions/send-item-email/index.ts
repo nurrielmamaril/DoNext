@@ -156,7 +156,9 @@ Deno.serve(async (req) => {
     subject = `Note: ${note.title || "Untitled"}`;
     const lines: string[] = [`<h2 style="margin:0 0 12px">${note.title || "Untitled"}</h2>`];
     if (listName) lines.push(`<p><strong>Category:</strong> ${listName}</p>`);
-    lines.push(`<p>${(note.content || "").replace(/\n/g, "<br>")}</p>`);
+    const rawContent = note.content || "";
+    const looksLikeHtml = /<(p|h[1-6]|ul|ol|li|strong|em|b|i|u|br|blockquote|a)[\s/>]/i.test(rawContent);
+    lines.push(looksLikeHtml ? rawContent : `<p>${rawContent.replace(/\n/g, "<br>")}</p>`);
     html = lines.join("\n") + FOOTER;
   }
 

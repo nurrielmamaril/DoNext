@@ -220,3 +220,58 @@ html.dark[data-accent="mustard"] {
     letter-spacing: -0.02em;
   }
 }
+
+.note-content {
+  font-size: 0.875rem;
+}
+.note-content p {
+  margin: 0.25rem 0;
+}
+.note-content p:first-child {
+  margin-top: 0;
+}
+.note-content p:last-child {
+  margin-bottom: 0;
+}
+.note-content h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0.5rem 0 0.25rem;
+}
+.note-content h2 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  margin: 0.4rem 0 0.2rem;
+}
+.note-content ul,
+.note-content ol {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem;
+}
+.note-content ul {
+  list-style: disc;
+}
+.note-content ol {
+  list-style: decimal;
+}
+.note-content blockquote {
+  border-left: 2px solid var(--border);
+  padding-left: 0.75rem;
+  color: var(--muted-foreground);
+}
+.note-content strong {
+  font-weight: 600;
+}
+.note-content u {
+  text-decoration: underline;
+}
+.note-content:focus {
+  outline: none;
+}
+.note-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--muted-foreground);
+  pointer-events: none;
+  height: 0;
+}
