@@ -45,14 +45,17 @@ export function SidebarListItem({ list, onRename, onDelete }: SidebarListItemPro
       <button
         {...attributes}
         {...listeners}
+        data-collapse-hide
         className="cursor-grab touch-none text-muted-foreground opacity-0 group-hover:opacity-100"
         aria-label="Drag to reorder"
       >
         <GripVertical className="size-3.5" />
       </button>
-      <CategoryAvatar listId={list.id} name={list.name} logoUrl={list.logo_url} size="sm" />
-      <Link href={`/lists/${list.id}`} className="flex-1 truncate">
-        {list.name}
+      <Link href={`/lists/${list.id}`} className="flex min-w-0 flex-1 items-center gap-2">
+        <CategoryAvatar listId={list.id} name={list.name} logoUrl={list.logo_url} size="sm" />
+        <span data-collapse-hide className="truncate">
+          {list.name}
+        </span>
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -60,6 +63,7 @@ export function SidebarListItem({ list, onRename, onDelete }: SidebarListItemPro
             <Button
               variant="ghost"
               size="icon-xs"
+              data-collapse-hide
               className="opacity-0 group-hover:opacity-100"
               aria-label="Category actions"
             />

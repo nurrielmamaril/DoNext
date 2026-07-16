@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -26,8 +26,11 @@ import {
   Plus,
   LayoutDashboard,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -35,6 +38,7 @@ import {
   useDeleteList,
   useReorderLists,
 } from "@/lib/hooks/useLists";
+import { useSidebarPrefs, MIN_WIDTH, MAX_WIDTH } from "@/lib/hooks/useSidebarPrefs";
 import { ListFormDialog } from "@/components/lists/ListFormDialog";
 import { SidebarListItem } from "@/components/lists/SidebarListItem";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -54,10 +58,13 @@ export function Sidebar({ userEmail }: { userEmail: string }) {
   const { data: lists } = useListsQuery();
   const deleteList = useDeleteList();
   const reorderLists = useReorderLists();
+  const { toggleCollapsed, setWidth } = useSidebarPrefs();
 
   const [listDialogOpen, setListDialogOpen] = useState(false);
   const [editingList, setEditingList] = useState<{ id: string; name: string; color: string | null } | null>(null);
   const [deletingList, setDeletingList] = useState<{ id: string; name: string } | null>(null);
+
+  const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -90,10 +97,49 @@ export function Sidebar({ userEmail }: { userEmail: string }) {
     }
   }
 
+  function handleResizePointerMove(e: PointerEvent) {
+    if (!dragState.current) return;
+    const next = Math.min(
+      Math.max(dragState.current.startWidth + (e.clientX - dragState.current.startX), MIN_WIDTH),
+      MAX_WIDTH
+    );
+    document.documentElement.style.setProperty("--sidebar-width", `${next}px`);
+  }
+
+  function handleResizePointerUp(e: PointerEvent) {
+    if (!dragState.current) return;
+    const next = Math.min(
+      Math.max(dragState.current.startWidth + (e.clientX - dragState.current.startX), MIN_WIDTH),
+      MAX_WIDTH
+    );
+    setWidth(next);
+    dragState.current = null;
+    window.removeEventListener("pointermove", handleResizePointerMove);
+    window.removeEventListener("pointerup", handleResizePointerUp);
+  }
+
+  function handleResizePointerDown(e: React.PointerEvent) {
+    dragState.current = {
+      startX: e.clientX,
+      startWidth: parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width"), 10),
+    };
+    window.addEventListener("pointermove", handleResizePointerMove);
+    window.addEventListener("pointerup", handleResizePointerUp);
+  }
+
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
-      <div className="p-4">
-        <h1 className="font-heading text-lg">DoNext</h1>
+    <aside
+      className="sidebar-aside relative flex h-screen shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground"
+      style={{ width: "var(--sidebar-width)" }}
+    >
+      <div className="flex items-center justify-between p-4">
+        <h1 data-collapse-hide className="font-heading text-lg">
+          DoNext
+        </h1>
+        <Button variant="ghost" size="icon-xs" onClick={toggleCollapsed} aria-label="Toggle sidebar">
+          <PanelLeftClose data-collapse-hide className="size-4" />
+          <PanelLeftOpen data-collapse-only className="size-4" />
+        </Button>
       </div>
 
       <nav className="flex flex-col gap-0.5 px-2">
@@ -101,24 +147,32 @@ export function Sidebar({ userEmail }: { userEmail: string }) {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm",
-                isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
-              )}
-            >
-              <Icon className="size-4" />
-              {item.label}
-            </Link>
+            <Tooltip key={item.href}>
+              <TooltipTrigger
+                render={
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm",
+                      isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                    )}
+                  />
+                }
+              >
+                <Icon className="size-4 shrink-0" />
+                <span data-collapse-hide>{item.label}</span>
+              </TooltipTrigger>
+              <TooltipContent side="right">{item.label}</TooltipContent>
+            </Tooltip>
           );
         })}
       </nav>
 
       <div className="mt-6 flex flex-1 flex-col overflow-hidden px-2">
         <div className="flex items-center justify-between px-2 py-1">
-          <span className="text-xs font-medium text-muted-foreground">Categories</span>
+          <span data-collapse-hide className="text-xs font-medium text-muted-foreground">
+            Categories
+          </span>
           <Button
             variant="ghost"
             size="icon-xs"
@@ -148,7 +202,7 @@ export function Sidebar({ userEmail }: { userEmail: string }) {
             </SortableContext>
           </DndContext>
           {lists?.length === 0 && (
-            <p className="px-2 py-2 text-xs text-muted-foreground">
+            <p data-collapse-hide className="px-2 py-2 text-xs text-muted-foreground">
               No categories yet. Create one for each client.
             </p>
           )}
@@ -156,18 +210,27 @@ export function Sidebar({ userEmail }: { userEmail: string }) {
       </div>
 
       <div className="border-t p-2">
-        <Link
-          href="/settings"
-          className={cn(
-            "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50",
-            pathname === "/settings" && "bg-accent text-accent-foreground"
-          )}
-        >
-          <Settings className="size-4" />
-          Settings
-        </Link>
-        <div className="mt-1 flex items-center justify-between px-2 py-1.5">
-          <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Link
+                href="/settings"
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50",
+                  pathname === "/settings" && "bg-accent text-accent-foreground"
+                )}
+              />
+            }
+          >
+            <Settings className="size-4 shrink-0" />
+            <span data-collapse-hide>Settings</span>
+          </TooltipTrigger>
+          <TooltipContent side="right">Settings</TooltipContent>
+        </Tooltip>
+        <div className="sidebar-footer-row mt-1 flex items-center justify-between gap-1 px-2 py-1.5">
+          <span data-collapse-hide className="truncate text-xs text-muted-foreground">
+            {userEmail}
+          </span>
           <div className="flex shrink-0 items-center">
             <AppearanceMenu />
             <Button variant="ghost" size="icon-xs" onClick={handleLogout} aria-label="Log out">
@@ -176,6 +239,13 @@ export function Sidebar({ userEmail }: { userEmail: string }) {
           </div>
         </div>
       </div>
+
+      <div
+        data-collapse-hide
+        onPointerDown={handleResizePointerDown}
+        className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-accent"
+        aria-hidden
+      />
 
       <ListFormDialog open={listDialogOpen} onOpenChange={setListDialogOpen} list={editingList} />
       <ConfirmDialog

@@ -53,6 +53,15 @@ export default function RootLayout({
               "try{var a=localStorage.getItem('accent');if(a)document.documentElement.setAttribute('data-accent',a);}catch(e){}",
           }}
         />
+        <script
+          // Same flash-avoidance trick for the sidebar's collapsed state and
+          // custom width — set before paint so the sidebar never briefly
+          // renders at the wrong size.
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var c=localStorage.getItem('sidebarCollapsed');if(c)document.documentElement.setAttribute('data-sidebar-collapsed',c);var w=localStorage.getItem('sidebarWidth');if(w)document.documentElement.style.setProperty('--sidebar-width',w+'px');}catch(e){}",
+          }}
+        />
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>

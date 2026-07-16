@@ -49,6 +49,7 @@
 }
 
 :root {
+  --sidebar-width: 256px;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -282,4 +283,17 @@ html.dark[data-accent="mustard"] {
   color: var(--muted-foreground);
   pointer-events: none;
   height: 0;
+}
+
+html[data-sidebar-collapsed="true"] .sidebar-aside {
+  width: 64px !important;
+}
+html[data-sidebar-collapsed="true"] [data-collapse-hide] {
+  display: none;
+}
+html:not([data-sidebar-collapsed="true"]) [data-collapse-only] {
+  display: none;
+}
+html[data-sidebar-collapsed="true"] .sidebar-footer-row {
+  flex-direction: column;
 }
