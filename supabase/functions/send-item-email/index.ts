@@ -124,7 +124,6 @@ Deno.serve(async (req) => {
 
     subject = `Task: ${task.title}`;
     const lines: string[] = [
-      `<h2 style="margin:0 0 12px">${task.title}</h2>`,
       `<p><strong>Priority:</strong> ${priorityLabels[task.priority] ?? task.priority}</p>`,
       `<p><strong>Status:</strong> ${statusLabels[task.status] ?? task.status}</p>`,
     ];
@@ -151,11 +150,10 @@ Deno.serve(async (req) => {
     }
 
     subject = `Note: ${note.title || "Untitled"}`;
-    const lines: string[] = [`<h2 style="margin:0 0 12px">${note.title || "Untitled"}</h2>`];
     const rawContent = note.content || "";
     const looksLikeHtml = /<(p|h[1-6]|ul|ol|li|strong|em|b|i|u|br|blockquote|a)[\s/>]/i.test(rawContent);
-    lines.push(looksLikeHtml ? rawContent : `<p>${rawContent.replace(/\n/g, "<br>")}</p>`);
-    html = lines.join("\n") + FOOTER;
+    const contentHtml = looksLikeHtml ? rawContent : `<p>${rawContent.replace(/\n/g, "<br>")}</p>`;
+    html = contentHtml + FOOTER;
   }
 
   if (customSubject && customSubject.trim()) {
