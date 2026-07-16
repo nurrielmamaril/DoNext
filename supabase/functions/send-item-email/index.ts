@@ -41,6 +41,12 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+const HTML_TAG_RE = /<(p|h[1-6]|ul|ol|li|strong|em|b|i|u|br|blockquote|a)[\s/>]/i;
+
+function looksLikeHtml(content: string): boolean {
+  return HTML_TAG_RE.test(content);
+}
+
 const FOOTER =
   '<p style="margin-top:24px;padding-top:12px;border-top:1px solid #e5e5e5;color:#888;font-size:12px">This email was sent from DoNext, Nurriel Mamaril\'s proprietary productivity software.</p>';
 
@@ -130,7 +136,10 @@ Deno.serve(async (req) => {
     if (dueLine) lines.push(`<p><strong>Due:</strong> ${dueLine}</p>`);
     if (task.is_recurring) lines.push(`<p><strong>Recurring:</strong> Yes</p>`);
     if (task.description) {
-      lines.push(`<p><strong>Description:</strong><br>${task.description.replace(/\n/g, "<br>")}</p>`);
+      const descriptionHtml = looksLikeHtml(task.description)
+        ? task.description
+        : `<p>${task.description.replace(/\n/g, "<br>")}</p>`;
+      lines.push(`<p><strong>Description:</strong></p>${descriptionHtml}`);
     }
     if (subtasks && subtasks.length > 0) {
       const items = subtasks
@@ -151,8 +160,7 @@ Deno.serve(async (req) => {
 
     subject = `Note: ${note.title || "Untitled"}`;
     const rawContent = note.content || "";
-    const looksLikeHtml = /<(p|h[1-6]|ul|ol|li|strong|em|b|i|u|br|blockquote|a)[\s/>]/i.test(rawContent);
-    const contentHtml = looksLikeHtml ? rawContent : `<p>${rawContent.replace(/\n/g, "<br>")}</p>`;
+    const contentHtml = looksLikeHtml(rawContent) ? rawContent : `<p>${rawContent.replace(/\n/g, "<br>")}</p>`;
     html = contentHtml + FOOTER;
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { useEditorState } from "@tiptap/react";
 import {
@@ -12,15 +12,18 @@ import {
   Heading1,
   Heading2,
   Italic,
+  Link as LinkIcon,
   List,
   ListOrdered,
   Underline,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-interface NoteToolbarProps {
+interface RichTextToolbarProps {
   editor: Editor | null;
 }
 
@@ -35,7 +38,89 @@ function ToolbarDivider() {
   return <div className="mx-0.5 h-4 w-px bg-border" />;
 }
 
-export function NoteToolbar({ editor }: NoteToolbarProps) {
+interface LinkPopoverProps {
+  editor: Editor;
+  isLink: boolean;
+  linkHref: string;
+  hasSelection: boolean;
+}
+
+function LinkPopover({ editor, isLink, linkHref, hasSelection }: LinkPopoverProps) {
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState("");
+  const savedSelection = useRef<{ from: number; to: number } | null>(null);
+  const disabled = !hasSelection && !isLink;
+
+  function handleOpenChange(next: boolean) {
+    if (next) setUrl(linkHref);
+    setOpen(next);
+  }
+
+  function applyLink() {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    const chain = editor.chain().focus();
+    if (savedSelection.current) chain.setTextSelection(savedSelection.current);
+    chain.extendMarkRange("link").setLink({ href: trimmed }).run();
+    setOpen(false);
+  }
+
+  function removeLink() {
+    const chain = editor.chain().focus();
+    if (savedSelection.current) chain.setTextSelection(savedSelection.current);
+    chain.extendMarkRange("link").unsetLink().run();
+    setOpen(false);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Link"
+            disabled={disabled}
+            className={cn(isLink && "bg-muted text-foreground")}
+            onPointerDown={() => {
+              const { from, to } = editor.state.selection;
+              savedSelection.current = { from, to };
+            }}
+          />
+        }
+      >
+        <LinkIcon className="size-3.5" />
+      </PopoverTrigger>
+      <PopoverContent className="w-64">
+        <Input
+          autoFocus
+          placeholder="https://example.com"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              applyLink();
+            }
+          }}
+        />
+        <div className="flex justify-end gap-1.5">
+          {isLink && (
+            <Button type="button" variant="outline" size="sm" onClick={removeLink}>
+              Remove link
+            </Button>
+          )}
+          <Button type="button" size="sm" onClick={applyLink} disabled={!url.trim()}>
+            Apply
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export function RichTextToolbar({ editor }: RichTextToolbarProps) {
   const savedSelection = useRef<{ from: number; to: number } | null>(null);
   const state = useEditorState({
     editor,
@@ -58,6 +143,9 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
               ? "justify"
               : "left",
         fontSize: (e.getAttributes("textStyle").fontSize as string | undefined) ?? "none",
+        isLink: e.isActive("link"),
+        linkHref: (e.getAttributes("link").href as string | undefined) ?? "",
+        hasSelection: !e.state.selection.empty,
       };
     },
   });
@@ -74,6 +162,9 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
     isOrderedList: false,
     align: "left" as const,
     fontSize: "none",
+    isLink: false,
+    linkHref: "",
+    hasSelection: false,
   };
 
   return (
@@ -108,6 +199,10 @@ export function NoteToolbar({ editor }: NoteToolbarProps) {
       >
         <Underline className="size-3.5" />
       </Button>
+
+      <ToolbarDivider />
+
+      <LinkPopover editor={editor} isLink={active.isLink} linkHref={active.linkHref} hasSelection={active.hasSelection} />
 
       <ToolbarDivider />
 

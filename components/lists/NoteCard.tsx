@@ -12,7 +12,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AttachmentList } from "@/components/attachments/AttachmentList";
 import { SendEmailDialog } from "@/components/tasks/SendEmailDialog";
-import { NoteEditor } from "@/components/lists/NoteEditor";
+import { RichTextEditor } from "@/components/shared/RichTextEditor";
 import { useUpdateNote, useDeleteNote } from "@/lib/hooks/useNotes";
 import { useUploadAttachment } from "@/lib/hooks/useAttachments";
 import { extractImageFromClipboard } from "@/lib/utils/clipboard";
@@ -200,7 +200,7 @@ export function NoteCard({
       </div>
       {expanded && (
         <div className="space-y-2 border-t px-2 py-2">
-          <NoteEditor
+          <RichTextEditor
             content={content}
             onChange={(html) => {
               setContent(html);

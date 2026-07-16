@@ -49,6 +49,16 @@ function dueLabel(task: TaskInfo): string | null {
   return task.due_time ? `${label} at ${formatDueTime(task.due_time)}` : label;
 }
 
+const HTML_TAG_RE = /<(p|h[1-6]|ul|ol|li|strong|em|b|i|u|br|blockquote|a)[\s/>]/i;
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function descriptionToHtml(description: string): string {
+  return HTML_TAG_RE.test(description) ? description : `<p>${escapeHtml(description)}</p>`;
+}
+
 async function sendBrowserPush(userId: string, taskTitle: string) {
   const { data: subscriptions } = await supabase
     .from("push_subscriptions")
@@ -98,7 +108,9 @@ async function sendEmail(userId: string, task: TaskInfo): Promise<{ ok: boolean;
     `<p>This is a reminder for your task:</p>`,
     `<p><strong>Title:</strong> ${task.title}</p>`,
   ];
-  if (task.description) htmlLines.push(`<p><strong>Description:</strong> ${task.description}</p>`);
+  if (task.description) {
+    htmlLines.push(`<p><strong>Description:</strong></p>${descriptionToHtml(task.description)}`);
+  }
   if (due) htmlLines.push(`<p><strong>Due Date:</strong> ${due}</p>`);
 
   const res = await fetch("https://api.resend.com/emails", {
