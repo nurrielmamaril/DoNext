@@ -258,7 +258,6 @@ export function TaskItem({
                 <FolderInput className="size-3.5" /> Move to
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
-                <DropdownMenuItem onClick={() => handleMove(null)}>Inbox</DropdownMenuItem>
                 {lists?.map((list) => (
                   <DropdownMenuItem key={list.id} onClick={() => handleMove(list.id)}>
                     {list.name}
