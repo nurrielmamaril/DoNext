@@ -7,48 +7,16 @@
 // key), so Row Level Security itself enforces "you can only email your own
 // tasks/notes" with no extra authorization code needed.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { format, isToday, isTomorrow, isYesterday, parseISO } from "npm:date-fns@4.4.0";
+import { buildItemEmailContent, sendViaResend } from "../_shared/itemEmail.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "DoNext <onboarding@resend.dev>";
 
-const priorityLabels: Record<string, string> = { low: "Low", high: "High", urgent: "Urgent" };
-const statusLabels: Record<string, string> = {
-  not_started: "Not Started",
-  in_progress: "In Progress",
-  waiting: "Waiting",
-  completed: "Completed",
-};
-
-function formatDueDate(dateStr: string): string {
-  const date = parseISO(dateStr);
-  if (isToday(date)) return "Today";
-  if (isTomorrow(date)) return "Tomorrow";
-  if (isYesterday(date)) return "Yesterday";
-  return format(date, "MMM d, yyyy");
-}
-
-function formatDueTime(timeStr: string): string {
-  const [h, m] = timeStr.split(":").map(Number);
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  return format(d, "h:mm a");
-}
-
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
-
-const HTML_TAG_RE = /<(p|h[1-6]|ul|ol|li|strong|em|b|i|u|br|blockquote|a)[\s/>]/i;
-
-function looksLikeHtml(content: string): boolean {
-  return HTML_TAG_RE.test(content);
-}
-
-const FOOTER =
-  '<p style="margin-top:24px;padding-top:12px;border-top:1px solid #e5e5e5;color:#888;font-size:12px">This email was sent from DoNext, Nurriel Mamaril\'s proprietary productivity software.</p>';
 
 // This function is called directly from the browser (unlike send-due-reminders,
 // which is only ever called server-side by pg_cron), so it needs CORS headers
@@ -104,82 +72,14 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "A valid recipient email is required" }, 400);
   }
 
-  let subject: string;
-  let html: string;
-
-  if (type === "task") {
-    const { data: task, error: taskError } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("id", id)
-      .is("deleted_at", null)
-      .single();
-    if (taskError || !task) {
-      return jsonResponse({ error: "Task not found" }, 404);
-    }
-
-    const { data: subtasks } = await supabase
-      .from("subtasks")
-      .select("title, is_complete")
-      .eq("task_id", id)
-      .order("position", { ascending: true });
-
-    const dueLine = task.due_date
-      ? `${formatDueDate(task.due_date)}${task.due_time ? ` at ${formatDueTime(task.due_time)}` : ""}`
-      : null;
-
-    subject = `Task: ${task.title}`;
-    const lines: string[] = [
-      `<p><strong>Priority:</strong> ${priorityLabels[task.priority] ?? task.priority}</p>`,
-      `<p><strong>Status:</strong> ${statusLabels[task.status] ?? task.status}</p>`,
-    ];
-    if (dueLine) lines.push(`<p><strong>Due:</strong> ${dueLine}</p>`);
-    if (task.is_recurring) lines.push(`<p><strong>Recurring:</strong> Yes</p>`);
-    if (task.description) {
-      const descriptionHtml = looksLikeHtml(task.description)
-        ? task.description
-        : `<p>${task.description.replace(/\n/g, "<br>")}</p>`;
-      lines.push(`<p><strong>Description:</strong></p>${descriptionHtml}`);
-    }
-    if (subtasks && subtasks.length > 0) {
-      const items = subtasks
-        .map((s: { title: string; is_complete: boolean }) => `<li>${s.is_complete ? "✅" : "⬜"} ${s.title}</li>`)
-        .join("");
-      lines.push(`<p><strong>Subtasks:</strong></p><ul>${items}</ul>`);
-    }
-    html = lines.join("\n") + FOOTER;
-  } else {
-    const { data: note, error: noteError } = await supabase
-      .from("notes")
-      .select("*")
-      .eq("id", id)
-      .single();
-    if (noteError || !note) {
-      return jsonResponse({ error: "Note not found" }, 404);
-    }
-
-    subject = `Note: ${note.title || "Untitled"}`;
-    const rawContent = note.content || "";
-    const contentHtml = looksLikeHtml(rawContent) ? rawContent : `<p>${rawContent.replace(/\n/g, "<br>")}</p>`;
-    html = contentHtml + FOOTER;
+  const content = await buildItemEmailContent(supabase, type, id, customSubject);
+  if ("error" in content) {
+    return jsonResponse({ error: content.error }, content.status);
   }
 
-  if (customSubject && customSubject.trim()) {
-    subject = customSubject.trim();
-  }
-
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from: RESEND_FROM, to: [to], subject, html }),
-  });
-
-  if (!res.ok) {
-    const bodyText = await res.text();
-    return jsonResponse({ error: `Resend error ${res.status}: ${bodyText}` }, 502);
+  const result = await sendViaResend(to, content.subject, content.html, RESEND_API_KEY, RESEND_FROM);
+  if (!result.ok) {
+    return jsonResponse({ error: result.error }, result.status ?? 502);
   }
 
   return jsonResponse({ ok: true });

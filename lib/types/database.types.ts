@@ -349,6 +349,42 @@ export interface Database {
           },
         ];
       };
+      scheduled_emails: {
+        Row: {
+          id: string;
+          user_id: string;
+          item_type: "task" | "note";
+          item_id: string;
+          recipient_email: string;
+          subject: string | null;
+          send_at: string;
+          status: "pending" | "sent" | "failed";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          item_type: "task" | "note";
+          item_id: string;
+          recipient_email: string;
+          subject?: string | null;
+          send_at: string;
+          status?: "pending" | "sent" | "failed";
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          item_type?: "task" | "note";
+          item_id?: string;
+          recipient_email?: string;
+          subject?: string | null;
+          send_at?: string;
+          status?: "pending" | "sent" | "failed";
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       push_subscriptions: {
         Row: {
           id: string;
