@@ -274,6 +274,10 @@ html.dark[data-accent="mustard"] {
 .rich-text-content a:hover {
   opacity: 0.8;
 }
+.rich-text-content mark {
+  border-radius: 2px;
+  padding: 0 1px;
+}
 .rich-text-content:focus {
   outline: none;
 }
