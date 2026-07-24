@@ -21,6 +21,7 @@ import {
   CalendarClock,
   CheckCircle2,
   ListTodo,
+  Mail,
   NotebookPen,
   Settings,
   Plus,
@@ -49,6 +50,7 @@ const navItems = [
   { href: "/tasks", label: "All Tasks", icon: ListTodo },
   { href: "/deadlines", label: "Deadlines", icon: CalendarClock },
   { href: "/completed", label: "Completed", icon: CheckCircle2 },
+  { href: "/scheduled-emails", label: "Scheduled Emails", icon: Mail },
   { href: "/notes", label: "General Notes", icon: NotebookPen },
 ];
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { X } from "lucide-react";
+import { Pencil, X } from "lucide-react";
 import {
   Dialog,
   DialogClose,
@@ -23,6 +23,7 @@ import {
   useCreateScheduledEmail,
   useCancelScheduledEmail,
 } from "@/lib/hooks/useScheduledEmails";
+import { EditScheduledEmailDialog, type EditableScheduledEmail } from "@/components/scheduled-emails/EditScheduledEmailDialog";
 
 interface SendEmailDialogProps {
   open: boolean;
@@ -40,7 +41,8 @@ export function SendEmailDialog({ open, onOpenChange, type, id, defaultSubject }
   const sendEmail = useSendItemEmail();
   const { data: pending } = useScheduledEmailsQuery(type, id);
   const createScheduled = useCreateScheduledEmail(type, id);
-  const cancelScheduled = useCancelScheduledEmail(type, id);
+  const cancelScheduled = useCancelScheduledEmail();
+  const [editing, setEditing] = useState<EditableScheduledEmail | null>(null);
 
   function resetForm() {
     setTo("");
@@ -83,7 +85,7 @@ export function SendEmailDialog({ open, onOpenChange, type, id, defaultSubject }
 
   async function handleCancel(scheduledId: string) {
     try {
-      await cancelScheduled.mutateAsync(scheduledId);
+      await cancelScheduled.mutateAsync({ id: scheduledId, item_type: type, item_id: id });
       toast.success("Scheduled email cancelled");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't cancel");
@@ -119,6 +121,16 @@ export function SendEmailDialog({ open, onOpenChange, type, id, defaultSubject }
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {format(new Date(row.send_at), "MMM d, yyyy 'at' h:mm a")}
                   </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="shrink-0 opacity-0 group-hover:opacity-100"
+                    aria-label="Edit scheduled email"
+                    onClick={() => setEditing(row)}
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
                   <Button
                     type="button"
                     variant="ghost"
@@ -181,6 +193,12 @@ export function SendEmailDialog({ open, onOpenChange, type, id, defaultSubject }
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <EditScheduledEmailDialog
+        open={Boolean(editing)}
+        onOpenChange={(open) => !open && setEditing(null)}
+        scheduledEmail={editing}
+      />
     </Dialog>
   );
 }
