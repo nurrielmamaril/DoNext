@@ -8,15 +8,38 @@ import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import type { EditorView } from "@tiptap/pm/view";
 import { RichTextToolbar } from "@/components/shared/RichTextToolbar";
 import { extractImageFromClipboard } from "@/lib/utils/clipboard";
-import { isHtmlContent, plainTextToHtml } from "@/lib/utils/richtext";
+import { fragmentToHtml, fragmentToPlainText, isHtmlContent, plainTextToHtml } from "@/lib/utils/richtext";
 
 interface RichTextEditorProps {
   content: string;
   onChange: (html: string) => void;
   onImagePaste?: (file: File) => void;
   placeholder?: string;
+}
+
+// Browsers auto-generate a plain-text clipboard flavor from the copied HTML,
+// but that conversion drops list markers and adds stray blank lines — which
+// is all a plain-text-only paste target (WhatsApp, a bare textarea) ever
+// sees. We write our own well-formatted text/plain instead, and re-write
+// text/html manually too since preventDefault() suppresses the browser's
+// automatic clipboard population entirely.
+function handleCopyOrCut(view: EditorView, event: Event, isCut: boolean): boolean {
+  const clipboardEvent = event as ClipboardEvent;
+  const { state } = view;
+  if (state.selection.empty || !clipboardEvent.clipboardData) return false;
+
+  const slice = state.selection.content();
+  clipboardEvent.clipboardData.setData("text/plain", fragmentToPlainText(slice.content));
+  clipboardEvent.clipboardData.setData("text/html", fragmentToHtml(state.schema, slice.content));
+  clipboardEvent.preventDefault();
+
+  if (isCut) {
+    view.dispatch(state.tr.deleteSelection());
+  }
+  return true;
 }
 
 export function RichTextEditor({ content, onChange, onImagePaste, placeholder }: RichTextEditorProps) {
@@ -50,6 +73,10 @@ export function RichTextEditor({ content, onChange, onImagePaste, placeholder }:
         event.preventDefault();
         onImagePaste(file);
         return true;
+      },
+      handleDOMEvents: {
+        copy: (view, event) => handleCopyOrCut(view, event, false),
+        cut: (view, event) => handleCopyOrCut(view, event, true),
       },
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
