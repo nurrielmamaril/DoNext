@@ -301,3 +301,50 @@ html:not([data-sidebar-collapsed="true"]) [data-collapse-only] {
 html[data-sidebar-collapsed="true"] .sidebar-footer-row {
   flex-direction: column;
 }
+
+
+/* Climbing-vine motion. Two nested transforms share the same pivot (each
+   vine's base, set inline): a wide slow sway that also drifts sideways, plus
+   a faster shallow flutter. Their periods don't divide evenly, so the
+   combined motion never visibly loops — it reads as wind, not a metronome. */
+@keyframes vine-sway {
+  0%,
+  100% {
+    transform: rotate(calc(var(--vine-amplitude, 5deg) * -1))
+      translateX(calc(var(--vine-drift, 4px) * -1));
+  }
+  50% {
+    transform: rotate(var(--vine-amplitude, 5deg)) translateX(var(--vine-drift, 4px));
+  }
+}
+@keyframes vine-flutter {
+  0%,
+  100% {
+    transform: rotate(calc(var(--vine-flutter-amplitude, 1.4deg) * -1));
+  }
+  50% {
+    transform: rotate(var(--vine-flutter-amplitude, 1.4deg));
+  }
+}
+.vine-sway {
+  animation: vine-sway var(--vine-duration, 5s) ease-in-out infinite;
+  animation-delay: var(--vine-delay, 0s);
+  will-change: transform;
+}
+.vine-flutter {
+  animation: vine-flutter var(--vine-flutter-duration, 2.1s) ease-in-out infinite;
+  animation-delay: var(--vine-flutter-delay, 0s);
+  will-change: transform;
+}
+/* Honour the OS "reduce motion" setting, but keep a trace of life rather than
+   freezing the drawing outright. */
+@media (prefers-reduced-motion: reduce) {
+  .vine-sway {
+    animation-duration: 18s;
+    --vine-amplitude: 0.6deg;
+    --vine-drift: 0px;
+  }
+  .vine-flutter {
+    animation: none;
+  }
+}

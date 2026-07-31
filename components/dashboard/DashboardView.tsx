@@ -9,6 +9,7 @@ import { formatDueDate } from "@/lib/utils/dates";
 import { todayISO } from "@/lib/utils/dates";
 import { TaskEditorDialog, type EditableTask } from "@/components/tasks/TaskEditorDialog";
 import { ListFormDialog } from "@/components/lists/ListFormDialog";
+import { VineGardenCanvas } from "@/components/garden/VineGardenCanvas";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/lib/types/database.types";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
@@ -33,7 +34,7 @@ function DashboardWidget({
   colorClass?: string;
 }) {
   return (
-    <Card>
+    <Card className="bg-background/85 shadow-lg backdrop-blur-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <Icon className="size-4 text-muted-foreground" />
@@ -108,23 +109,40 @@ export function DashboardView() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <div className="flex items-center justify-between pb-6">
+    // The garden fills the page behind everything; the widgets float on top.
+    // pointer-events-none on the overlay lets drags in empty space reach the
+    // garden underneath, while the cards themselves stay interactive.
+    <div className="relative h-full overflow-hidden">
+      <div className="absolute inset-0">
+        <VineGardenCanvas />
+      </div>
+
+      <div className="pointer-events-none relative z-10 mx-auto max-w-4xl p-6">
+      <div className="pointer-events-auto flex items-center justify-between pb-6">
         <h2 className="font-heading text-xl">Dashboard</h2>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => setListDialogOpen(true)}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-background/90 shadow backdrop-blur-sm"
+            onClick={() => setListDialogOpen(true)}
+          >
             <Plus className="size-4" /> New list
           </Button>
-          <Button size="sm" onClick={() => setTaskDialogOpen(true)}>
+          <Button size="sm" className="shadow" onClick={() => setTaskDialogOpen(true)}>
             <Plus className="size-4" /> New task
           </Button>
         </div>
       </div>
 
-      {isLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
+      {isLoading && (
+        <p className="pointer-events-auto w-fit rounded bg-background/85 px-2 py-1 text-sm text-muted-foreground shadow">
+          Loading...
+        </p>
+      )}
 
       {!isLoading && (
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="pointer-events-auto grid gap-4 sm:grid-cols-3">
           <DashboardWidget
             icon={AlertTriangle}
             title="Overdue"
@@ -153,6 +171,7 @@ export function DashboardView() {
           />
         </div>
       )}
+      </div>
 
       <TaskEditorDialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen} />
       <ListFormDialog open={listDialogOpen} onOpenChange={setListDialogOpen} />
