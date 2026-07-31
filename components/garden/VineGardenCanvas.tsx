@@ -25,7 +25,13 @@ export function VineGardenCanvas() {
 
   const tallestUnits = plots.length ? Math.max(...plots.map((p) => vineHeight(p.completedCount))) : 0;
   const viewportH = typeof window === "undefined" ? 800 : window.innerHeight;
-  const drawHeight = Math.max(viewportH * MIN_HEIGHT_VH, tallestUnits * PX_PER_UNIT);
+  // Grows with the garden, but stops inflating the DOM element past a few
+  // screens — beyond that the vine keeps gaining detail (pods, girth) and you
+  // zoom in to inspect it rather than the page growing without limit.
+  const drawHeight = Math.min(
+    Math.max(viewportH * MIN_HEIGHT_VH, tallestUnits * PX_PER_UNIT),
+    viewportH * 4
+  );
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     dragRef.current = { startX: e.clientX, startY: e.clientY, originX: offset.x, originY: offset.y };
