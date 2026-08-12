@@ -367,3 +367,16 @@ html[data-sidebar-collapsed="true"] .sidebar-aside .sidebar-footer-row {
 .safe-offset-bottom {
   bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
 }
+
+/* Default garden scale. The drawing is wide and short (vines sit side by
+   side), so fitting it into a tall phone screen leaves it very small. This
+   scales it up from the bottom edge on narrow screens to a sensible default
+   size; the user's own zoom multiplies on top of it. */
+.garden-fit {
+  --garden-fit: 1;
+}
+@media (max-width: 640px) {
+  .garden-fit {
+    --garden-fit: 2.4;
+  }
+}

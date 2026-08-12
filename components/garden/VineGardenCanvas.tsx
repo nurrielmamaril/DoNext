@@ -63,10 +63,14 @@ export function VineGardenCanvas() {
             own aspect ratio — that left unfillable gaps on narrow screens.
             The SVG covers this box (see preserveAspectRatio in VineGarden),
             so there is never empty space, and pan/zoom ride on top. */}
+        {/* --garden-fit (globals.css) is the per-breakpoint default size —
+            larger on phones, where the fitted drawing would otherwise be
+            tiny. Growth happens from the bottom edge so the vines stay
+            rooted there, and the user's zoom multiplies on top. */}
         <div
-          className="absolute inset-0"
+          className="garden-fit absolute inset-0"
           style={{
-            transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+            transform: `translate(${offset.x}px, ${offset.y}px) scale(calc(var(--garden-fit, 1) * ${zoom}))`,
             transformOrigin: "bottom center",
           }}
         >

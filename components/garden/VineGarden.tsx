@@ -51,11 +51,11 @@ export function VineGarden({ plots }: VineGardenProps) {
       aria-label={`Ink drawing: one climbing vine per category. ${plots
         .map((p) => `${p.name}, ${p.completedCount} completed`)
         .join("; ")}`}
-      // "slice" scales to *cover* the container and crops the overflow,
-      // anchored bottom-centre — so the drawing always fills the screen with
-      // no letterboxed white space, whatever the aspect ratio. Zoom out to
-      // see the full width of a wide garden.
-      preserveAspectRatio="xMidYMax slice"
+      // "meet" fits the whole drawing inside the view (never cropped, never
+      // oversized) and yMax anchors it to the bottom — so the vines sit along
+      // the bottom edge and any spare room is at the top, where the dashboard
+      // cards sit. Zoom controls still adjust it manually from there.
+      preserveAspectRatio="xMidYMax meet"
       className="absolute inset-0 block h-full w-full"
     >
       {scene.vines.map(({ plot, cx, geometry, tipY }, i) => {
