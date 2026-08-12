@@ -367,15 +367,3 @@ html[data-sidebar-collapsed="true"] .sidebar-aside .sidebar-footer-row {
 .safe-offset-bottom {
   bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
 }
-
-/* Shrinks the whole vine garden on narrow screens so every category is
-   visible without pinching. Multiplied into the zoom transform, so the user's
-   own zoom still works on top of it. */
-.garden-fit {
-  --garden-fit: 1;
-}
-@media (max-width: 640px) {
-  .garden-fit {
-    --garden-fit: 0.6;
-  }
-}

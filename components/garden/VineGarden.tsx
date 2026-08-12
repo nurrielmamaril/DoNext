@@ -51,8 +51,12 @@ export function VineGarden({ plots }: VineGardenProps) {
       aria-label={`Ink drawing: one climbing vine per category. ${plots
         .map((p) => `${p.name}, ${p.completedCount} completed`)
         .join("; ")}`}
-      preserveAspectRatio="xMidYMax meet"
-      className="block h-full w-full overflow-visible"
+      // "slice" scales to *cover* the container and crops the overflow,
+      // anchored bottom-centre — so the drawing always fills the screen with
+      // no letterboxed white space, whatever the aspect ratio. Zoom out to
+      // see the full width of a wide garden.
+      preserveAspectRatio="xMidYMax slice"
+      className="absolute inset-0 block h-full w-full"
     >
       {scene.vines.map(({ plot, cx, geometry, tipY }, i) => {
         // Deliberately non-harmonic periods per vine, so the garden never

@@ -117,8 +117,8 @@ export function DashboardView() {
         <VineGardenCanvas />
       </div>
 
-      <div className="pointer-events-none relative z-10 mx-auto max-w-4xl p-6">
-      <div className="pointer-events-auto flex items-center justify-between pb-6">
+      <div className="pointer-events-none relative z-10 mx-auto flex h-full max-w-4xl flex-col p-4 md:p-6">
+      <div className="pointer-events-auto flex shrink-0 items-center justify-between pb-4 md:pb-6">
         <h2 className="font-heading text-xl">Dashboard</h2>
         <div className="flex gap-2">
           <Button
@@ -141,8 +141,11 @@ export function DashboardView() {
         </p>
       )}
 
+      {/* min-h-0 lets the grid shrink inside the flex column, so cards scroll
+          internally on a phone rather than overflowing the screen, while the
+          garden behind stays put and draggable. */}
       {!isLoading && (
-        <div className="pointer-events-auto grid gap-4 sm:grid-cols-3">
+        <div className="pointer-events-auto grid min-h-0 gap-3 overflow-y-auto sm:grid-cols-3 md:gap-4">
           <DashboardWidget
             icon={AlertTriangle}
             title="Overdue"
