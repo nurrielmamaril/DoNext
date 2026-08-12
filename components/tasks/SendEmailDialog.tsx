@@ -125,7 +125,7 @@ export function SendEmailDialog({ open, onOpenChange, type, id, defaultSubject }
                     type="button"
                     variant="ghost"
                     size="icon-xs"
-                    className="shrink-0 opacity-0 group-hover:opacity-100"
+                    className="shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100"
                     aria-label="Edit scheduled email"
                     onClick={() => setEditing(row)}
                   >
@@ -135,7 +135,7 @@ export function SendEmailDialog({ open, onOpenChange, type, id, defaultSubject }
                     type="button"
                     variant="ghost"
                     size="icon-xs"
-                    className="shrink-0 opacity-0 group-hover:opacity-100"
+                    className="shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100"
                     aria-label="Cancel scheduled email"
                     onClick={() => handleCancel(row.id)}
                   >

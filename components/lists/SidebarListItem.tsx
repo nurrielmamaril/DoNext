@@ -19,9 +19,11 @@ interface SidebarListItemProps {
   list: { id: string; name: string; logo_url: string | null };
   onRename: () => void;
   onDelete: () => void;
+  /** Mobile only — closes the drawer after tapping a category. */
+  onNavigate?: () => void;
 }
 
-export function SidebarListItem({ list, onRename, onDelete }: SidebarListItemProps) {
+export function SidebarListItem({ list, onRename, onDelete, onNavigate }: SidebarListItemProps) {
   const pathname = usePathname();
   const isActive = pathname === `/lists/${list.id}`;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -46,12 +48,16 @@ export function SidebarListItem({ list, onRename, onDelete }: SidebarListItemPro
         {...attributes}
         {...listeners}
         data-collapse-hide
-        className="cursor-grab touch-none text-muted-foreground opacity-0 group-hover:opacity-100"
+        className="cursor-grab touch-none text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100"
         aria-label="Drag to reorder"
       >
         <GripVertical className="size-3.5" />
       </button>
-      <Link href={`/lists/${list.id}`} className="flex min-w-0 flex-1 items-center gap-2">
+      <Link
+        href={`/lists/${list.id}`}
+        onClick={onNavigate}
+        className="flex min-w-0 flex-1 items-center gap-2"
+      >
         <CategoryAvatar listId={list.id} name={list.name} logoUrl={list.logo_url} size="sm" />
         <span data-collapse-hide className="truncate">
           {list.name}
@@ -64,7 +70,7 @@ export function SidebarListItem({ list, onRename, onDelete }: SidebarListItemPro
               variant="ghost"
               size="icon-xs"
               data-collapse-hide
-              className="opacity-0 group-hover:opacity-100"
+              className="opacity-100 md:opacity-0 md:group-hover:opacity-100"
               aria-label="Category actions"
             />
           }

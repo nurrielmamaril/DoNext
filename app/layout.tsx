@@ -27,10 +27,27 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "DoNext",
   },
+  // iOS ignores the manifest's icons entirely and needs its own link tag.
+  // Next only auto-detects icon files placed in app/, not public/, so this
+  // is declared explicitly — without it the home-screen icon is a screenshot.
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
+  other: {
+    // Next emits the modern `mobile-web-app-capable`; older iOS versions only
+    // recognise the apple-prefixed form, and having both is harmless.
+    "apple-mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: "#0a0a0a",
+  width: "device-width",
+  initialScale: 1,
+  // Lets the app paint edge-to-edge under the notch/home indicator when
+  // launched from the home screen; the safe-area padding in globals.css keeps
+  // actual content clear of them.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

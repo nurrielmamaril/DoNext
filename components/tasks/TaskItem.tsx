@@ -164,7 +164,7 @@ export function TaskItem({
           <button
             {...attributes}
             {...listeners}
-            className="mt-0.5 cursor-grab touch-none self-start text-muted-foreground opacity-0 group-hover:opacity-100"
+            className="mt-0.5 cursor-grab touch-none self-start text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100"
             aria-label="Drag to reorder"
           >
             <GripVertical className="size-3.5" />
@@ -236,7 +236,7 @@ export function TaskItem({
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="opacity-0 group-hover:opacity-100"
+                className="opacity-100 md:opacity-0 md:group-hover:opacity-100"
                 aria-label="Task actions"
               />
             }

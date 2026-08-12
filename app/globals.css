@@ -292,13 +292,13 @@ html.dark[data-accent="mustard"] {
 html[data-sidebar-collapsed="true"] .sidebar-aside {
   width: 64px !important;
 }
-html[data-sidebar-collapsed="true"] [data-collapse-hide] {
+html[data-sidebar-collapsed="true"] .sidebar-aside [data-collapse-hide] {
   display: none;
 }
-html:not([data-sidebar-collapsed="true"]) [data-collapse-only] {
+html:not([data-sidebar-collapsed="true"]) .sidebar-aside [data-collapse-only] {
   display: none;
 }
-html[data-sidebar-collapsed="true"] .sidebar-footer-row {
+html[data-sidebar-collapsed="true"] .sidebar-aside .sidebar-footer-row {
   flex-direction: column;
 }
 
@@ -346,5 +346,36 @@ html[data-sidebar-collapsed="true"] .sidebar-footer-row {
   }
   .vine-flutter {
     animation: none;
+  }
+}
+
+/* iPhone safe areas. When the app runs from the home screen with
+   viewportFit:"cover", the viewport extends under the notch and the home
+   indicator — these keep real content clear of both. env() resolves to 0 on
+   every other device, so these are no-ops on desktop and Android. */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-x {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+/* For floating controls that are positioned rather than padded. */
+.safe-offset-bottom {
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Shrinks the whole vine garden on narrow screens so every category is
+   visible without pinching. Multiplied into the zoom transform, so the user's
+   own zoom still works on top of it. */
+.garden-fit {
+  --garden-fit: 1;
+}
+@media (max-width: 640px) {
+  .garden-fit {
+    --garden-fit: 0.6;
   }
 }

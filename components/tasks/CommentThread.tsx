@@ -51,7 +51,7 @@ export function CommentThread({ taskId }: { taskId: string }) {
                 type="button"
                 variant="ghost"
                 size="icon-xs"
-                className="shrink-0 opacity-0 group-hover:opacity-100"
+                className="shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100"
                 aria-label="Delete comment"
                 onClick={() => handleDelete(comment.id)}
               >

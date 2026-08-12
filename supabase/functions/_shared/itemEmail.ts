@@ -37,6 +37,48 @@ export function looksLikeHtml(content: string): boolean {
 export const FOOTER =
   '<p style="margin-top:24px;padding-top:12px;border-top:1px solid #e5e5e5;color:#888;font-size:12px">This email was sent from DoNext, Nurriel Mamaril\'s proprietary productivity software.</p>';
 
+function stripStyleAttr(attrs: string): string {
+  return attrs.replace(/\s*style="[^"]*"/gi, "");
+}
+
+// Email clients ignore stylesheets, so spacing has to be inlined. The big one:
+// Tiptap emits <li><p>text</p></li>, and a client's default ~1em paragraph
+// margin (top AND bottom) doubles the gap between list items compared to how
+// the same content looks in the app. Unwrapping those paragraphs and pinning
+// explicit margins makes the email match the editor.
+// Regex over HTML is normally a bad idea, but this only ever runs on our own
+// Tiptap output, which is a small, predictable subset of HTML.
+export function normalizeEmailHtml(html: string): string {
+  let out = html;
+
+  // Unwrap <p> inside <li>; multiple paragraphs in one item become <br> lines.
+  out = out.replace(/<li([^>]*)>([\s\S]*?)<\/li>/gi, (_match, attrs: string, inner: string) => {
+    const unwrapped = inner
+      .replace(/<p[^>]*>/gi, "")
+      .replace(/<\/p>\s*/gi, "<br>")
+      .replace(/(<br>\s*)+$/i, "");
+    return `<li${stripStyleAttr(attrs)} style="margin:0 0 4px;padding:0">${unwrapped}</li>`;
+  });
+
+  out = out.replace(
+    /<(ol|ul)([^>]*)>/gi,
+    (_match, tag: string, attrs: string) =>
+      `<${tag}${stripStyleAttr(attrs)} style="margin:8px 0 12px;padding-left:24px">`
+  );
+
+  out = out.replace(
+    /<(h[1-6])([^>]*)>/gi,
+    (_match, tag: string, attrs: string) =>
+      `<${tag}${stripStyleAttr(attrs)} style="margin:16px 0 8px">`
+  );
+
+  // Remaining paragraphs are the block-level ones. Skip any that already carry
+  // a style (the footer, and anything the editor styled inline).
+  out = out.replace(/<p(?![^>]*style=)([^>]*)>/gi, '<p$1 style="margin:0 0 10px">');
+
+  return out;
+}
+
 export type ItemEmailResult = { subject: string; html: string } | { error: string; status: number };
 
 export async function buildItemEmailContent(
@@ -105,7 +147,7 @@ export async function buildItemEmailContent(
     subject = customSubject.trim();
   }
 
-  return { subject, html };
+  return { subject, html: normalizeEmailHtml(html) };
 }
 
 export async function sendViaResend(

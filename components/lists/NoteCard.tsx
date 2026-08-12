@@ -122,7 +122,7 @@ export function NoteCard({
           <button
             {...attributes}
             {...listeners}
-            className="cursor-grab touch-none text-muted-foreground opacity-0 group-hover:opacity-100"
+            className="cursor-grab touch-none text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100"
             aria-label="Drag to reorder"
           >
             <GripVertical className="size-3.5" />
@@ -152,7 +152,7 @@ export function NoteCard({
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100"
+                className="shrink-0 text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100"
                 aria-label="Note color"
               />
             }
@@ -179,7 +179,7 @@ export function NoteCard({
           <Button
             variant="ghost"
             size="icon-xs"
-            className="shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100"
+            className="shrink-0 text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100"
             aria-label="Send note via email"
             onClick={() => setSendEmailOpen(true)}
           >
@@ -190,7 +190,7 @@ export function NoteCard({
           <Button
             variant="ghost"
             size="icon-xs"
-            className="shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100"
+            className="shrink-0 text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100"
             aria-label="Delete note"
             onClick={() => setConfirmDelete(true)}
           >

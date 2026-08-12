@@ -14,7 +14,7 @@ const ZOOM_STEP = 0.25;
 // Geometry units -> pixels at zoom 1. Combined with the minimum below, small
 // gardens still read big and bold instead of a few tiny scratches.
 const PX_PER_UNIT = 3.4;
-const MIN_HEIGHT_VH = 0.62;
+const MIN_HEIGHT_DVH = 62;
 
 export function VineGardenCanvas() {
   const { plots, isLoading } = useGardenData();
@@ -24,14 +24,11 @@ export function VineGardenCanvas() {
   const [dragging, setDragging] = useState(false);
 
   const tallestUnits = plots.length ? Math.max(...plots.map((p) => vineHeight(p.completedCount))) : 0;
-  const viewportH = typeof window === "undefined" ? 800 : window.innerHeight;
-  // Grows with the garden, but stops inflating the DOM element past a few
-  // screens — beyond that the vine keeps gaining detail (pods, girth) and you
-  // zoom in to inspect it rather than the page growing without limit.
-  const drawHeight = Math.min(
-    Math.max(viewportH * MIN_HEIGHT_VH, tallestUnits * PX_PER_UNIT),
-    viewportH * 4
-  );
+  // Expressed in CSS rather than read off `window`, so the server and client
+  // render identical markup (no hydration mismatch) and it reacts to rotation
+  // and resize for free. clamp() = grows with the garden, never smaller than
+  // most of a screen, never taller than a few screens' worth of DOM.
+  const drawHeight = `clamp(${MIN_HEIGHT_DVH}dvh, ${Math.round(tallestUnits * PX_PER_UNIT)}px, 400dvh)`;
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     dragRef.current = { startX: e.clientX, startY: e.clientY, originX: offset.x, originY: offset.y };
@@ -76,10 +73,13 @@ export function VineGardenCanvas() {
         {/* Anchored to the bottom edge; the stems are drawn past it and get
             clipped, so there's no empty strip under the vines. */}
         <div
-          className="absolute bottom-0 left-1/2 origin-bottom"
+          // --garden-fit (globals.css) scales the whole garden down on phone
+          // widths so every vine is visible without pinching, and multiplies
+          // with whatever zoom level the user has chosen.
+          className="garden-fit absolute bottom-0 left-1/2 origin-bottom"
           style={{
             height: drawHeight,
-            transform: `translateX(-50%) translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+            transform: `translateX(-50%) translate(${offset.x}px, ${offset.y}px) scale(calc(var(--garden-fit, 1) * ${zoom}))`,
             transformOrigin: "bottom center",
           }}
         >
@@ -87,7 +87,7 @@ export function VineGardenCanvas() {
         </div>
       </div>
 
-      <div className="pointer-events-auto absolute bottom-4 right-4 z-20 flex flex-col gap-1">
+      <div className="safe-offset-bottom pointer-events-auto absolute right-4 z-20 flex flex-col gap-1">
         <Button
           variant="outline"
           size="icon-xs"

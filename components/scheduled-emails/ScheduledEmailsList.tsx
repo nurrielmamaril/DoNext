@@ -61,7 +61,7 @@ export function ScheduledEmailsList() {
           <span className="shrink-0 text-xs text-muted-foreground">
             {format(new Date(row.send_at), "MMM d, yyyy 'at' h:mm a")}
           </span>
-          <div className="flex shrink-0 items-center opacity-0 group-hover:opacity-100">
+          <div className="flex shrink-0 items-center opacity-100 md:opacity-0 md:group-hover:opacity-100">
             <Button
               type="button"
               variant="ghost"

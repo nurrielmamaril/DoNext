@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, CheckCircle2 } from "lucide-react";
+import { Download, CheckCircle2, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -19,15 +19,32 @@ function isStandalone() {
   );
 }
 
+// iOS Safari never fires `beforeinstallprompt`, so there is no button we can
+// offer — installing is a manual Share-sheet action. Detecting iOS lets us
+// show the real steps instead of a prompt that will never arrive.
+// iPadOS reports as "Macintosh", hence the touch-point check.
+function isIos() {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent;
+  return (
+    /iPad|iPhone|iPod/.test(ua) ||
+    (/Macintosh/.test(ua) && typeof document !== "undefined" && "ontouchend" in document)
+  );
+}
+
 export function InstallPrompt() {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
+  const [ios, setIos] = useState(false);
   const checkedRef = useRef(false);
 
   useEffect(() => {
     if (!checkedRef.current) {
       checkedRef.current = true;
       setInstalled(isStandalone());
+      // Set after mount, never during render — these read browser-only APIs
+      // and would otherwise differ between the server and client markup.
+      setIos(isIos());
     }
 
     function handleBeforeInstallPrompt(e: Event) {
@@ -66,8 +83,41 @@ export function InstallPrompt() {
         {installed ? (
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <CheckCircle2 className="size-4 text-green-600 dark:text-green-400" />
-            DoNext is installed. It opens like a regular app from your desktop or start menu.
+            DoNext is installed. It opens like a regular app from your home screen, desktop, or
+            start menu.
           </p>
+        ) : ios ? (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Add DoNext to your Home Screen to open it like a normal app, without the Safari
+              address bar:
+            </p>
+            <ol className="space-y-1.5 text-sm text-muted-foreground">
+              <li className="flex gap-2">
+                <span className="font-medium text-foreground">1.</span>
+                <span className="flex flex-wrap items-center gap-1">
+                  Tap the Share button
+                  <Share className="inline size-4 shrink-0" />
+                  at the bottom of Safari
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="font-medium text-foreground">2.</span>
+                <span>
+                  Scroll down and tap <span className="text-foreground">Add to Home Screen</span>
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="font-medium text-foreground">3.</span>
+                <span>
+                  Tap <span className="text-foreground">Add</span> in the top-right corner
+                </span>
+              </li>
+            </ol>
+            <p className="text-xs text-muted-foreground">
+              This only works in Safari — Chrome on iPhone can&apos;t add apps to the Home Screen.
+            </p>
+          </div>
         ) : installEvent ? (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
