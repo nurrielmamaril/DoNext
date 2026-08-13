@@ -24,7 +24,11 @@ export const metadata: Metadata = {
   description: "Simple task, reminder, and note management",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    // "black-translucent" lets the page paint underneath the status bar, so
+    // the top bar's own background continues right up behind the clock and
+    // battery instead of iOS drawing its own grey band. The safe-area padding
+    // on MobileTopBar is what keeps the content itself clear of it.
+    statusBarStyle: "black-translucent",
     title: "DoNext",
   },
   // iOS ignores the manifest's icons entirely and needs its own link tag.
@@ -41,7 +45,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0a",
+  // Was a fixed near-black, which clashed with the light UI. Now it follows
+  // the active colour scheme so the browser/OS chrome matches the app.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
   width: "device-width",
   initialScale: 1,
   // Lets the app paint edge-to-edge under the notch/home indicator when

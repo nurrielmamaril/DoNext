@@ -17,31 +17,121 @@ import {
 // sitting on a visible floor with empty space beneath them.
 const BOTTOM_OVERSHOOT = 40;
 
+export type GardenLayout = "row" | "frame";
+
 interface VineGardenProps {
   plots: VinePlot[];
+  /**
+   * "row" lines the vines up along the bottom (wide screens). "frame" roots
+   * them on the left, right and bottom edges growing inward, which fits every
+   * category into a single portrait phone screen.
+   */
+  layout?: GardenLayout;
 }
 
-export function VineGarden({ plots }: VineGardenProps) {
+type Edge = "bottom" | "left" | "right";
+const EDGE_ORDER: Edge[] = ["left", "right", "bottom"];
+
+// Rotating a vine about its own base is what lets the same "grows upward"
+// geometry sprout from a side edge instead. SVG rotation is clockwise, so
+// +90 turns "up" into "right" (left edge) and -90 into "left" (right edge).
+const EDGE_ANGLE: Record<Edge, number> = { bottom: 0, left: 90, right: -90 };
+
+export function VineGarden({ plots, layout = "row" }: VineGardenProps) {
   const scene = useMemo(() => {
+    const tallest = plots.length
+      ? Math.max(...plots.map((p) => vineHeight(p.completedCount)))
+      : vineHeight(0);
+
+    if (layout === "frame") {
+      // Portrait canvas roughly phone-shaped. The box grows more slowly than
+      // the vines do, so vines take up an increasing share of it over time
+      // rather than staying a constant relative size.
+      const height = Math.round(260 + tallest * 1.2);
+      const width = Math.round(height * 0.52);
+
+      // Spread categories around the three edges, cycling so they alternate.
+      const byEdge: Record<Edge, number[]> = { bottom: [], left: [], right: [] };
+      plots.forEach((_, i) => byEdge[EDGE_ORDER[i % EDGE_ORDER.length]].push(i));
+
+      const vines = plots.map((plot) => ({ plot }) as never) as Array<{
+        plot: VinePlot;
+        cx: number;
+        baseY: number;
+        angle: number;
+        geometry: ReturnType<typeof buildVine>;
+        labelX: number;
+        labelY: number;
+        labelAnchor: "start" | "middle" | "end";
+      }>;
+
+      (Object.keys(byEdge) as Edge[]).forEach((edge) => {
+        const indices = byEdge[edge];
+        indices.forEach((plotIndex, k) => {
+          const t = (k + 1) / (indices.length + 1);
+          const angle = EDGE_ANGLE[edge];
+          let cx: number;
+          let baseY: number;
+          if (edge === "bottom") {
+            cx = width * t;
+            baseY = height + BOTTOM_OVERSHOOT;
+          } else if (edge === "left") {
+            cx = -BOTTOM_OVERSHOOT;
+            baseY = height * (0.2 + 0.62 * t);
+          } else {
+            cx = width + BOTTOM_OVERSHOOT;
+            baseY = height * (0.2 + 0.62 * t);
+          }
+
+          const plot = plots[plotIndex];
+          const geometry = buildVine(plot.completedCount, cx, baseY, seedFromId(plot.listId));
+          // Where the tip lands once the vine is rotated onto its edge — the
+          // label is drawn unrotated there so text never reads sideways.
+          const rad = (angle * Math.PI) / 180;
+          const labelX = cx + geometry.height * Math.sin(rad);
+          const labelY = baseY - geometry.height * Math.cos(rad);
+
+          vines[plotIndex] = {
+            plot,
+            cx,
+            baseY,
+            angle,
+            geometry,
+            labelX,
+            labelY,
+            labelAnchor: edge === "right" ? "end" : "start",
+          };
+        });
+      });
+
+      return { width, height, vines, layout };
+    }
+
     // Columns widen with the heftiest vine so neighbours never grow into
     // each other as they fill out.
     const maxGirth = plots.length ? Math.max(...plots.map((p) => girthFactor(p.completedCount))) : 1;
     const columnWidth = COLUMN_WIDTH * maxGirth;
     const width = Math.max(1, plots.length) * columnWidth;
-    const tallest = plots.length
-      ? Math.max(...plots.map((p) => vineHeight(p.completedCount)))
-      : vineHeight(0);
     const height = Math.round(tallest + TOP_PADDING - BOTTOM_OVERSHOOT);
     const baseY = height + BOTTOM_OVERSHOOT; // below the visible edge
 
     const vines = plots.map((plot, i) => {
       const cx = i * columnWidth + columnWidth / 2;
       const geometry = buildVine(plot.completedCount, cx, baseY, seedFromId(plot.listId));
-      return { plot, cx, geometry, tipY: baseY - geometry.height };
+      return {
+        plot,
+        cx,
+        baseY,
+        angle: 0,
+        geometry,
+        labelX: cx + 12 * geometry.girth,
+        labelY: baseY - geometry.height,
+        labelAnchor: "start" as const,
+      };
     });
 
-    return { width, height, baseY, vines };
-  }, [plots]);
+    return { width, height, vines, layout };
+  }, [plots, layout]);
 
   return (
     <svg
@@ -51,14 +141,14 @@ export function VineGarden({ plots }: VineGardenProps) {
       aria-label={`Ink drawing: one climbing vine per category. ${plots
         .map((p) => `${p.name}, ${p.completedCount} completed`)
         .join("; ")}`}
-      // "meet" fits the whole drawing inside the view (never cropped, never
-      // oversized) and yMax anchors it to the bottom — so the vines sit along
-      // the bottom edge and any spare room is at the top, where the dashboard
-      // cards sit. Zoom controls still adjust it manually from there.
-      preserveAspectRatio="xMidYMax meet"
+      // "meet" fits the whole drawing inside the view, never cropped. Row
+      // layout anchors to the bottom (vines line the bottom edge, cards sit in
+      // the space above); frame layout centres, since vines come in from all
+      // three edges.
+      preserveAspectRatio={scene.layout === "frame" ? "xMidYMid meet" : "xMidYMax meet"}
       className="absolute inset-0 block h-full w-full"
     >
-      {scene.vines.map(({ plot, cx, geometry, tipY }, i) => {
+      {scene.vines.map(({ plot, cx, baseY, angle, geometry, labelX, labelY, labelAnchor }, i) => {
         // Deliberately non-harmonic periods per vine, so the garden never
         // falls into a synchronised rhythm.
         const swayDuration = 4.3 + i * 1.1;
@@ -67,12 +157,17 @@ export function VineGarden({ plots }: VineGardenProps) {
         const drift = 4 + (i % 2) * 2;
         const flutterAmplitude = 1.5 + (i % 2) * 0.6;
         return (
+          <g key={plot.listId}>
+          {/* This inner group carries the edge placement as an SVG attribute
+              transform; the sway/flutter animations use CSS transforms on the
+              groups below, which would otherwise overwrite it. Labels are
+              siblings of this group so they never rotate with the vine. */}
+          <g transform={angle ? `rotate(${angle} ${cx} ${baseY})` : undefined}>
           <g
-            key={plot.listId}
             className="vine-sway"
             style={
               {
-                transformOrigin: `${cx}px ${scene.baseY}px`,
+                transformOrigin: `${cx}px ${baseY}px`,
                 "--vine-duration": `${swayDuration}s`,
                 "--vine-delay": `${-i * 1.7}s`,
                 "--vine-amplitude": `${amplitude}deg`,
@@ -84,7 +179,7 @@ export function VineGarden({ plots }: VineGardenProps) {
               className="vine-flutter"
               style={
                 {
-                  transformOrigin: `${cx}px ${scene.baseY}px`,
+                  transformOrigin: `${cx}px ${baseY}px`,
                   "--vine-flutter-duration": `${flutterDuration}s`,
                   "--vine-flutter-delay": `${-i * 0.8}s`,
                   "--vine-flutter-amplitude": `${flutterAmplitude}deg`,
@@ -114,11 +209,16 @@ export function VineGarden({ plots }: VineGardenProps) {
               ))}
               <path d={geometry.bud} strokeWidth={1.6 * geometry.girth} />
             </g>
+            </g>
+          </g>
+          </g>
 
-            {/* Label rides near the growing tip, since the base is off-screen. */}
+            {/* Labels sit outside the rotated group, so a vine growing in from
+                a side edge still gets horizontal, readable text at its tip. */}
             <text
-              x={cx + 12 * geometry.girth}
-              y={tipY - 22 * geometry.girth}
+              x={labelX + (labelAnchor === "end" ? -6 : 6) * geometry.girth}
+              y={labelY - 4 * geometry.girth}
+              textAnchor={labelAnchor}
               fontSize={9 * geometry.girth}
               fontWeight="600"
               className="fill-foreground"
@@ -126,14 +226,14 @@ export function VineGarden({ plots }: VineGardenProps) {
               {plot.name}
             </text>
             <text
-              x={cx + 12 * geometry.girth}
-              y={tipY - 12 * geometry.girth}
+              x={labelX + (labelAnchor === "end" ? -6 : 6) * geometry.girth}
+              y={labelY + 7 * geometry.girth}
+              textAnchor={labelAnchor}
               fontSize={8 * geometry.girth}
               className="fill-muted-foreground"
             >
               {plot.completedCount} done
             </text>
-            </g>
           </g>
         );
       })}

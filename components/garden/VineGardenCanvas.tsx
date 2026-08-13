@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { Minus, Plus, Locate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGardenData } from "@/lib/hooks/useGarden";
+import { useIsMobile } from "@/lib/hooks/useMediaQuery";
 import { VineGarden } from "@/components/garden/VineGarden";
 
 const MIN_ZOOM = 0.4;
@@ -12,6 +13,7 @@ const ZOOM_STEP = 0.25;
 
 export function VineGardenCanvas() {
   const { plots, isLoading } = useGardenData();
+  const isMobile = useIsMobile();
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
@@ -74,7 +76,7 @@ export function VineGardenCanvas() {
             transformOrigin: "bottom center",
           }}
         >
-          <VineGarden plots={plots} />
+          <VineGarden plots={plots} layout={isMobile ? "frame" : "row"} />
         </div>
       </div>
 

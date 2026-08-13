@@ -375,8 +375,3 @@ html[data-sidebar-collapsed="true"] .sidebar-aside .sidebar-footer-row {
 .garden-fit {
   --garden-fit: 1;
 }
-@media (max-width: 640px) {
-  .garden-fit {
-    --garden-fit: 2.4;
-  }
-}
