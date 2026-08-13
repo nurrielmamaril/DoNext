@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileTopBar } from "@/components/layout/MobileTopBar";
-import { RoutePrefetcher } from "@/components/layout/RoutePrefetcher";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -18,7 +17,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // h-dvh (not h-screen/100vh) tracks the real visible height on mobile
     // Safari, which reports 100vh as the *expanded* viewport.
     <div className="flex h-dvh overflow-hidden">
-      <RoutePrefetcher />
       <Sidebar userEmail={email} />
       {/* On mobile the nav becomes a top bar + drawer stacked above content;
           at md+ this column is just the page itself beside the sidebar.

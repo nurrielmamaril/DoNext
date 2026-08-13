@@ -55,9 +55,6 @@ export function SidebarListItem({ list, onRename, onDelete, onNavigate }: Sideba
       </button>
       <Link
         href={`/lists/${list.id}`}
-        // Same reason as the main nav: category pages are dynamic, so without
-        // this the first tap waits on a server round-trip.
-        prefetch
         onClick={onNavigate}
         className="flex min-w-0 flex-1 items-center gap-2"
       >
