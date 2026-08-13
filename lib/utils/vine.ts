@@ -81,6 +81,31 @@ export function podHatch(x: number, y: number, r: number): string {
   return lines.join(" ");
 }
 
+// How far a finished vine actually spreads either side of its root. Measured
+// off the generated geometry rather than guessed from the constants, so a
+// caller can scale a vine to fit an exact column without clipping or leaving
+// a wasteful margin. Every path this module emits writes coordinates as
+// `x,y` pairs, which is what makes the scan reliable.
+export function vineHalfWidth(geometry: VineGeometry, cx: number): number {
+  let max = 0;
+  const scan = (d: string) => {
+    const pair = /(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g;
+    let m: RegExpExecArray | null;
+    while ((m = pair.exec(d)) !== null) {
+      max = Math.max(max, Math.abs(parseFloat(m[1]) - cx));
+    }
+  };
+  scan(geometry.stem);
+  scan(geometry.stemHighlight);
+  geometry.branches.forEach(scan);
+  geometry.leaves.forEach(scan);
+  scan(geometry.bud);
+  geometry.pods.forEach((p) => {
+    max = Math.max(max, Math.abs(p.x - cx) + p.r);
+  });
+  return Math.max(1, max);
+}
+
 export function buildVine(completedCount: number, cx: number, baseY: number, seed: number): VineGeometry {
   const count = Math.max(0, completedCount);
   const rnd = mulberry32(seed);

@@ -44,9 +44,10 @@ export function MobileTopBar({ userEmail }: { userEmail: string }) {
         <DialogPrimitive.Portal>
           <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/40 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
           <DialogPrimitive.Popup
-            // Rounded outer corners so the panel reads like a native iOS
-            // sheet rather than a hard-edged rectangle.
-            className="safe-top fixed inset-y-0 left-0 z-50 flex w-[min(20rem,85vw)] flex-col overflow-hidden rounded-r-2xl border-r bg-sidebar text-sidebar-foreground shadow-xl duration-200 data-open:animate-in data-open:slide-in-from-left data-closed:animate-out data-closed:slide-out-to-left"
+            // A floating, fully rounded sheet rather than a full-bleed
+            // rectangle — `drawer-inset` holds it clear of every edge
+            // (including the notch) so all four corners actually show.
+            className="drawer-inset fixed z-50 flex w-[min(19rem,82vw)] flex-col overflow-hidden rounded-2xl border bg-sidebar text-sidebar-foreground shadow-2xl duration-200 data-open:animate-in data-open:slide-in-from-left data-closed:animate-out data-closed:slide-out-to-left"
             aria-label="Navigation"
           >
             <DialogPrimitive.Close

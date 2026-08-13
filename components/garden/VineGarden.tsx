@@ -7,6 +7,7 @@ import {
   girthFactor,
   podHatch,
   seedFromId,
+  vineHalfWidth,
   vineHeight,
   COLUMN_WIDTH,
   TOP_PADDING,
@@ -22,27 +23,21 @@ export type GardenLayout = "row" | "frame";
 interface VineGardenProps {
   plots: VinePlot[];
   /**
-   * "row" lines the vines up along the bottom (wide screens). "frame" roots
-   * them on the left, right and bottom edges growing inward, which fits every
-   * category into a single portrait phone screen.
+   * "row" lines the vines up along the bottom at full size, letting the SVG
+   * grow as wide as it needs (wide screens). "frame" fits the same bottom row
+   * into the container exactly, shrinking the vines as far as it takes so a
+   * phone shows every category at once with nothing to scroll.
    */
   layout?: GardenLayout;
   /**
    * Frame layout only: the pixel size of the box this SVG fills. The viewBox
    * is set to match it exactly (1 unit = 1px) so the drawing's edges *are* the
    * container's edges — otherwise preserveAspectRatio letterboxes the canvas
-   * and the "edge" vines end up floating in the middle.
+   * and the row ends up floating in the middle.
    */
   containerWidth?: number;
   containerHeight?: number;
 }
-
-type Edge = "bottom" | "left" | "right";
-
-// Rotating a vine about its own base is what lets the same "grows upward"
-// geometry sprout from a side edge instead. SVG rotation is clockwise, so
-// +90 turns "up" into "right" (left edge) and -90 into "left" (right edge).
-const EDGE_ANGLE: Record<Edge, number> = { bottom: 0, left: 90, right: -90 };
 
 export function VineGarden({
   plots,
@@ -56,85 +51,53 @@ export function VineGarden({
       : vineHeight(0);
 
     if (layout === "frame") {
-      // 1 unit = 1 px, matching the container exactly, so the vines really do
-      // root on the container's own left, right and bottom edges.
+      // 1 unit = 1 px, matching the container exactly, so the row really does
+      // sit on the container's own bottom edge.
       const width = containerWidth;
       const height = containerHeight;
 
-      // The first category (top of the sidebar — the personal one) takes the
-      // bottom centre on its own; the rest alternate left and right, so client
-      // vines line the sides and never crowd into the same corner.
-      const byEdge: Record<Edge, number[]> = { bottom: [], left: [], right: [] };
-      plots.forEach((_, i) => {
-        if (i === 0) byEdge.bottom.push(i);
-        else if (i % 2 === 1) byEdge.left.push(i);
-        else byEdge.right.push(i);
+      // Every category gets an equal column along the bottom, in sidebar
+      // order — evenly spaced roots, one shared baseline, one label row.
+      const count = Math.max(1, plots.length);
+      const columnWidth = width / count;
+      // Only a shallow overshoot here: the row is scaled down to fit a phone,
+      // and a deep one would bury most of each vine below the edge.
+      const rootY = height + 8;
+      const labelBand = 26; // reserved at the bottom for the two label lines
+
+      const raw = plots.map((plot, i) => {
+        const cx = columnWidth * (i + 0.5);
+        const geometry = buildVine(plot.completedCount, cx, rootY, seedFromId(plot.listId));
+        return { plot, cx, geometry, halfWidth: vineHalfWidth(geometry, cx) };
       });
 
-      const vines = plots.map((plot) => ({ plot }) as never) as Array<{
-        plot: VinePlot;
-        cx: number;
-        baseY: number;
-        angle: number;
-        vineScale: number;
-        geometry: ReturnType<typeof buildVine>;
-        labelX: number;
-        labelY: number;
-        labelAnchor: "start" | "middle" | "end";
-      }>;
+      // One scale for the whole row, set by whichever vine is tightest —
+      // shrinking each vine to its own column instead would flatten the size
+      // differences that show which categories you've done the most in.
+      const vineScale = raw.reduce((worst, v) => {
+        const fitsWidth = (columnWidth * 0.5) / v.halfWidth;
+        const fitsHeight = (rootY - 4) / v.geometry.height;
+        return Math.min(worst, fitsWidth, fitsHeight);
+      }, 1);
 
-      (Object.keys(byEdge) as Edge[]).forEach((edge) => {
-        const indices = byEdge[edge];
-        indices.forEach((plotIndex, k) => {
-          // Even slots along the edge, inset from the corners so neighbours
-          // (and the labels beside them) each get their own band of space.
-          const t = (k + 1) / (indices.length + 1);
-          const angle = EDGE_ANGLE[edge];
-          let cx: number;
-          let baseY: number;
-          if (edge === "bottom") {
-            cx = width * (0.18 + 0.64 * t);
-            baseY = height + BOTTOM_OVERSHOOT;
-          } else if (edge === "left") {
-            cx = -BOTTOM_OVERSHOOT;
-            baseY = height * (0.1 + 0.72 * t);
-          } else {
-            cx = width + BOTTOM_OVERSHOOT;
-            baseY = height * (0.1 + 0.72 * t);
-          }
+      // Labels shrink until the longest name fits its column, then every
+      // label uses that one size so the row reads as a tidy legend.
+      const longest = plots.reduce((n, p) => Math.max(n, p.name.length), 1);
+      const nameSize = Math.max(6, Math.min(11, (columnWidth - 4) / (0.58 * longest)));
+      const countSize = Math.max(5.5, nameSize * 0.85);
 
-          const plot = plots[plotIndex];
-          const geometry = buildVine(plot.completedCount, cx, baseY, seedFromId(plot.listId));
-
-          // Vines grow without limit, so on a small screen a long one would
-          // eventually reach across and tangle with the vine opposite. Cap how
-          // far into the frame any single vine may reach.
-          const maxReach = edge === "bottom" ? height * 0.55 : width * 0.46;
-          const vineScale = Math.min(1, maxReach / Math.max(1, geometry.height));
-
-          // Labels are pinned relative to the vine's *root* on its edge, not
-          // its tip — the tip moves as the vine grows, which made the labels
-          // wander. This keeps them in predictable places.
-          let labelX: number;
-          let labelY: number;
-          let labelAnchor: "start" | "middle" | "end";
-          if (edge === "bottom") {
-            labelX = cx;
-            labelY = height - 16;
-            labelAnchor = "middle";
-          } else if (edge === "left") {
-            labelX = 12;
-            labelY = baseY;
-            labelAnchor = "start";
-          } else {
-            labelX = width - 12;
-            labelY = baseY;
-            labelAnchor = "end";
-          }
-
-          vines[plotIndex] = { plot, cx, baseY, angle, vineScale, geometry, labelX, labelY, labelAnchor };
-        });
-      });
+      const vines = raw.map(({ plot, cx, geometry }) => ({
+        plot,
+        cx,
+        baseY: rootY,
+        vineScale,
+        geometry,
+        labelX: cx,
+        labelY: height - labelBand + nameSize,
+        labelAnchor: "middle" as const,
+        nameSize,
+        countSize,
+      }));
 
       return { width, height, vines, layout };
     }
@@ -154,12 +117,13 @@ export function VineGarden({
         plot,
         cx,
         baseY,
-        angle: 0,
         vineScale: 1,
         geometry,
-        labelX: cx + 12 * geometry.girth,
-        labelY: baseY - geometry.height,
+        labelX: cx + 18 * geometry.girth,
+        labelY: baseY - geometry.height - 4 * geometry.girth,
         labelAnchor: "start" as const,
+        nameSize: 9 * geometry.girth,
+        countSize: 8 * geometry.girth,
       };
     });
 
@@ -174,14 +138,14 @@ export function VineGarden({
       aria-label={`Ink drawing: one climbing vine per category. ${plots
         .map((p) => `${p.name}, ${p.completedCount} completed`)
         .join("; ")}`}
-      // "meet" fits the whole drawing inside the view, never cropped. Row
-      // layout anchors to the bottom (vines line the bottom edge, cards sit in
-      // the space above); frame layout centres, since vines come in from all
-      // three edges.
-      preserveAspectRatio={scene.layout === "frame" ? "xMidYMid meet" : "xMidYMax meet"}
+      // "meet" fits the whole drawing inside the view, never cropped, anchored
+      // to the bottom so the vines line the bottom edge and the cards sit in
+      // the space above. (In frame layout the viewBox already equals the
+      // container, so this only matters for the row layout.)
+      preserveAspectRatio="xMidYMax meet"
       className="absolute inset-0 block h-full w-full"
     >
-      {scene.vines.map(({ plot, cx, baseY, angle, vineScale, geometry, labelX, labelY, labelAnchor }, i) => {
+      {scene.vines.map(({ plot, cx, baseY, vineScale, geometry, labelX, labelY, labelAnchor, nameSize, countSize }, i) => {
         // Deliberately non-harmonic periods per vine, so the garden never
         // falls into a synchronised rhythm.
         const swayDuration = 4.3 + i * 1.1;
@@ -189,11 +153,6 @@ export function VineGarden({
         const amplitude = 5.2 + (i % 3) * 1.1;
         const drift = 4 + (i % 2) * 2;
         const flutterAmplitude = 1.5 + (i % 2) * 0.6;
-        const isFrame = scene.layout === "frame";
-        // Frame labels are one fixed size for every vine, so the set reads as
-        // a tidy legend rather than text that grows with each plant.
-        const nameSize = isFrame ? 11 : 9 * geometry.girth;
-        const countSize = isFrame ? 9.5 : 8 * geometry.girth;
         // A halo in the page's own background colour, painted *under* the
         // glyphs, so a label stays readable where it crosses a vine's strokes
         // instead of tangling with them.
@@ -204,23 +163,19 @@ export function VineGarden({
           strokeLinejoin: "round",
         };
 
-        // Edge placement, then an optional shrink about the same root point so
-        // a long vine can't reach across the frame into its neighbour.
-        const placement = [
-          angle ? `rotate(${angle} ${cx} ${baseY})` : "",
+        // Shrink about the vine's own root, so a long vine stays inside its
+        // column instead of growing into its neighbour's.
+        const placement =
           vineScale < 1
             ? `translate(${cx} ${baseY}) scale(${vineScale.toFixed(3)}) translate(${-cx} ${-baseY})`
-            : "",
-        ]
-          .filter(Boolean)
-          .join(" ");
+            : "";
 
         return (
           <g key={plot.listId}>
-          {/* This inner group carries the edge placement as an SVG attribute
-              transform; the sway/flutter animations use CSS transforms on the
-              groups below, which would otherwise overwrite it. Labels are
-              siblings of this group so they never rotate with the vine. */}
+          {/* This inner group carries the fit-to-column scale as an SVG
+              attribute transform; the sway/flutter animations use CSS
+              transforms on the groups below, which would otherwise overwrite
+              it. Labels are siblings, so they keep their own size. */}
           <g transform={placement || undefined}>
           <g
             className="vine-sway"
@@ -272,13 +227,11 @@ export function VineGarden({
           </g>
           </g>
 
-            {/* Labels sit outside the rotated group, so a vine growing in from
-                a side edge still gets horizontal, readable text. In frame
-                layout they're pinned to the vine's edge at a fixed size, so
-                every label lines up instead of drifting with the tip. */}
+            {/* Labels sit outside the scaled group so they stay legible at
+                whatever size the vines had to be squeezed to. */}
             <text
-              x={isFrame ? labelX : labelX + (labelAnchor === "end" ? -6 : 6) * geometry.girth}
-              y={isFrame ? labelY - 5 : labelY - 4 * geometry.girth}
+              x={labelX}
+              y={labelY}
               textAnchor={labelAnchor}
               fontSize={nameSize}
               fontWeight="600"
@@ -288,8 +241,8 @@ export function VineGarden({
               {plot.name}
             </text>
             <text
-              x={isFrame ? labelX : labelX + (labelAnchor === "end" ? -6 : 6) * geometry.girth}
-              y={isFrame ? labelY + 8 : labelY + 7 * geometry.girth}
+              x={labelX}
+              y={labelY + countSize + 3}
               textAnchor={labelAnchor}
               fontSize={countSize}
               style={labelHalo}

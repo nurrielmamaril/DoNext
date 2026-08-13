@@ -368,6 +368,15 @@ html[data-sidebar-collapsed="true"] .sidebar-aside .sidebar-footer-row {
   bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* The mobile nav drawer floats clear of every screen edge — including the
+   notch and home indicator — so all four of its rounded corners are visible,
+   the way an iOS sheet looks. */
+.drawer-inset {
+  top: calc(0.5rem + env(safe-area-inset-top, 0px));
+  bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  left: calc(0.5rem + env(safe-area-inset-left, 0px));
+}
+
 /* Default garden scale. The drawing is wide and short (vines sit side by
    side), so fitting it into a tall phone screen leaves it very small. This
    scales it up from the bottom edge on narrow screens to a sensible default
