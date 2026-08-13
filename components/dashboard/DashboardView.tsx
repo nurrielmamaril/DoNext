@@ -112,8 +112,12 @@ export function DashboardView() {
     // The garden fills the page behind everything; the widgets float on top.
     // pointer-events-none on the overlay lets drags in empty space reach the
     // garden underneath, while the cards themselves stay interactive.
-    <div className="relative h-full overflow-hidden">
-      <div className="absolute inset-0">
+    <div className="relative overflow-hidden md:h-full">
+      {/* `fixed` on mobile pins the garden to the real viewport, so it always
+          sits on the bottom edge of the screen no matter how the surrounding
+          layout resolves its height. On desktop it goes back to filling this
+          container, beside the sidebar. */}
+      <div className="fixed inset-0 md:absolute">
         <VineGardenCanvas />
       </div>
 
