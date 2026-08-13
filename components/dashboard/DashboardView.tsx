@@ -116,8 +116,10 @@ export function DashboardView() {
       {/* `fixed` on mobile pins the garden to the real viewport, so it always
           sits on the bottom edge of the screen no matter how the surrounding
           layout resolves its height. On desktop it goes back to filling this
-          container, beside the sidebar. */}
-      <div className="fixed inset-0 md:absolute">
+          container, beside the sidebar. z-0 keeps it behind the top bar and
+          cards — a positioned element would otherwise paint over them and
+          swallow taps meant for the menu button. */}
+      <div className="fixed inset-0 z-0 md:absolute">
         <VineGardenCanvas />
       </div>
 
