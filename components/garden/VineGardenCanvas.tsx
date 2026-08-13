@@ -102,7 +102,7 @@ export function VineGardenCanvas() {
           size="icon-xs"
           aria-label="Zoom in"
           onClick={() => zoomBy(ZOOM_STEP)}
-          className="bg-background/95 shadow md:bg-background/90 md:backdrop-blur-sm"
+          className="bg-background/90 shadow backdrop-blur-sm"
         >
           <Plus className="size-3.5" />
         </Button>
@@ -111,7 +111,7 @@ export function VineGardenCanvas() {
           size="icon-xs"
           aria-label="Zoom out"
           onClick={() => zoomBy(-ZOOM_STEP)}
-          className="bg-background/95 shadow md:bg-background/90 md:backdrop-blur-sm"
+          className="bg-background/90 shadow backdrop-blur-sm"
         >
           <Minus className="size-3.5" />
         </Button>
@@ -120,7 +120,7 @@ export function VineGardenCanvas() {
           size="icon-xs"
           aria-label="Reset view"
           onClick={reset}
-          className="bg-background/95 shadow md:bg-background/90 md:backdrop-blur-sm"
+          className="bg-background/90 shadow backdrop-blur-sm"
         >
           <Locate className="size-3.5" />
         </Button>
