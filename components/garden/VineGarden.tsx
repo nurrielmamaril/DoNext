@@ -38,7 +38,6 @@ interface VineGardenProps {
 }
 
 type Edge = "bottom" | "left" | "right";
-const EDGE_ORDER: Edge[] = ["left", "right", "bottom"];
 
 // Rotating a vine about its own base is what lets the same "grows upward"
 // geometry sprout from a side edge instead. SVG rotation is clockwise, so
@@ -62,9 +61,15 @@ export function VineGarden({
       const width = containerWidth;
       const height = containerHeight;
 
-      // Spread categories around the three edges, cycling so they alternate.
+      // The first category (top of the sidebar — the personal one) takes the
+      // bottom centre on its own; the rest alternate left and right, so client
+      // vines line the sides and never crowd into the same corner.
       const byEdge: Record<Edge, number[]> = { bottom: [], left: [], right: [] };
-      plots.forEach((_, i) => byEdge[EDGE_ORDER[i % EDGE_ORDER.length]].push(i));
+      plots.forEach((_, i) => {
+        if (i === 0) byEdge.bottom.push(i);
+        else if (i % 2 === 1) byEdge.left.push(i);
+        else byEdge.right.push(i);
+      });
 
       const vines = plots.map((plot) => ({ plot }) as never) as Array<{
         plot: VinePlot;
@@ -92,10 +97,10 @@ export function VineGarden({
             baseY = height + BOTTOM_OVERSHOOT;
           } else if (edge === "left") {
             cx = -BOTTOM_OVERSHOOT;
-            baseY = height * (0.16 + 0.68 * t);
+            baseY = height * (0.1 + 0.72 * t);
           } else {
             cx = width + BOTTOM_OVERSHOOT;
-            baseY = height * (0.16 + 0.68 * t);
+            baseY = height * (0.1 + 0.72 * t);
           }
 
           const plot = plots[plotIndex];
@@ -189,6 +194,15 @@ export function VineGarden({
         // a tidy legend rather than text that grows with each plant.
         const nameSize = isFrame ? 11 : 9 * geometry.girth;
         const countSize = isFrame ? 9.5 : 8 * geometry.girth;
+        // A halo in the page's own background colour, painted *under* the
+        // glyphs, so a label stays readable where it crosses a vine's strokes
+        // instead of tangling with them.
+        const labelHalo: React.CSSProperties = {
+          paintOrder: "stroke",
+          stroke: "var(--background)",
+          strokeWidth: 3.5,
+          strokeLinejoin: "round",
+        };
 
         // Edge placement, then an optional shrink about the same root point so
         // a long vine can't reach across the frame into its neighbour.
@@ -268,6 +282,7 @@ export function VineGarden({
               textAnchor={labelAnchor}
               fontSize={nameSize}
               fontWeight="600"
+              style={labelHalo}
               className="fill-foreground"
             >
               {plot.name}
@@ -277,6 +292,7 @@ export function VineGarden({
               y={isFrame ? labelY + 8 : labelY + 7 * geometry.girth}
               textAnchor={labelAnchor}
               fontSize={countSize}
+              style={labelHalo}
               className="fill-muted-foreground"
             >
               {plot.completedCount} done
