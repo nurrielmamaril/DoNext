@@ -71,6 +71,7 @@ export function VineGarden({
         cx: number;
         baseY: number;
         angle: number;
+        vineScale: number;
         geometry: ReturnType<typeof buildVine>;
         labelX: number;
         labelY: number;
@@ -80,39 +81,53 @@ export function VineGarden({
       (Object.keys(byEdge) as Edge[]).forEach((edge) => {
         const indices = byEdge[edge];
         indices.forEach((plotIndex, k) => {
+          // Even slots along the edge, inset from the corners so neighbours
+          // (and the labels beside them) each get their own band of space.
           const t = (k + 1) / (indices.length + 1);
           const angle = EDGE_ANGLE[edge];
           let cx: number;
           let baseY: number;
           if (edge === "bottom") {
-            cx = width * t;
+            cx = width * (0.18 + 0.64 * t);
             baseY = height + BOTTOM_OVERSHOOT;
           } else if (edge === "left") {
             cx = -BOTTOM_OVERSHOOT;
-            baseY = height * (0.12 + 0.76 * t);
+            baseY = height * (0.16 + 0.68 * t);
           } else {
             cx = width + BOTTOM_OVERSHOOT;
-            baseY = height * (0.12 + 0.76 * t);
+            baseY = height * (0.16 + 0.68 * t);
           }
 
           const plot = plots[plotIndex];
           const geometry = buildVine(plot.completedCount, cx, baseY, seedFromId(plot.listId));
-          // Where the tip lands once the vine is rotated onto its edge — the
-          // label is drawn unrotated there so text never reads sideways.
-          const rad = (angle * Math.PI) / 180;
-          const labelX = cx + geometry.height * Math.sin(rad);
-          const labelY = baseY - geometry.height * Math.cos(rad);
 
-          vines[plotIndex] = {
-            plot,
-            cx,
-            baseY,
-            angle,
-            geometry,
-            labelX,
-            labelY,
-            labelAnchor: edge === "right" ? "end" : "start",
-          };
+          // Vines grow without limit, so on a small screen a long one would
+          // eventually reach across and tangle with the vine opposite. Cap how
+          // far into the frame any single vine may reach.
+          const maxReach = edge === "bottom" ? height * 0.55 : width * 0.46;
+          const vineScale = Math.min(1, maxReach / Math.max(1, geometry.height));
+
+          // Labels are pinned relative to the vine's *root* on its edge, not
+          // its tip — the tip moves as the vine grows, which made the labels
+          // wander. This keeps them in predictable places.
+          let labelX: number;
+          let labelY: number;
+          let labelAnchor: "start" | "middle" | "end";
+          if (edge === "bottom") {
+            labelX = cx;
+            labelY = height - 16;
+            labelAnchor = "middle";
+          } else if (edge === "left") {
+            labelX = 12;
+            labelY = baseY;
+            labelAnchor = "start";
+          } else {
+            labelX = width - 12;
+            labelY = baseY;
+            labelAnchor = "end";
+          }
+
+          vines[plotIndex] = { plot, cx, baseY, angle, vineScale, geometry, labelX, labelY, labelAnchor };
         });
       });
 
@@ -135,6 +150,7 @@ export function VineGarden({
         cx,
         baseY,
         angle: 0,
+        vineScale: 1,
         geometry,
         labelX: cx + 12 * geometry.girth,
         labelY: baseY - geometry.height,
@@ -160,7 +176,7 @@ export function VineGarden({
       preserveAspectRatio={scene.layout === "frame" ? "xMidYMid meet" : "xMidYMax meet"}
       className="absolute inset-0 block h-full w-full"
     >
-      {scene.vines.map(({ plot, cx, baseY, angle, geometry, labelX, labelY, labelAnchor }, i) => {
+      {scene.vines.map(({ plot, cx, baseY, angle, vineScale, geometry, labelX, labelY, labelAnchor }, i) => {
         // Deliberately non-harmonic periods per vine, so the garden never
         // falls into a synchronised rhythm.
         const swayDuration = 4.3 + i * 1.1;
@@ -168,17 +184,30 @@ export function VineGarden({
         const amplitude = 5.2 + (i % 3) * 1.1;
         const drift = 4 + (i % 2) * 2;
         const flutterAmplitude = 1.5 + (i % 2) * 0.6;
-        // The frame canvas is much narrower in user units than the row one, so
-        // it magnifies more on screen — labels need to be proportionally
-        // smaller to come out as readable phone-sized text rather than huge.
-        const labelScale = 1; // frame units are already pixels, so no rescale needed
+        const isFrame = scene.layout === "frame";
+        // Frame labels are one fixed size for every vine, so the set reads as
+        // a tidy legend rather than text that grows with each plant.
+        const nameSize = isFrame ? 11 : 9 * geometry.girth;
+        const countSize = isFrame ? 9.5 : 8 * geometry.girth;
+
+        // Edge placement, then an optional shrink about the same root point so
+        // a long vine can't reach across the frame into its neighbour.
+        const placement = [
+          angle ? `rotate(${angle} ${cx} ${baseY})` : "",
+          vineScale < 1
+            ? `translate(${cx} ${baseY}) scale(${vineScale.toFixed(3)}) translate(${-cx} ${-baseY})`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+
         return (
           <g key={plot.listId}>
           {/* This inner group carries the edge placement as an SVG attribute
               transform; the sway/flutter animations use CSS transforms on the
               groups below, which would otherwise overwrite it. Labels are
               siblings of this group so they never rotate with the vine. */}
-          <g transform={angle ? `rotate(${angle} ${cx} ${baseY})` : undefined}>
+          <g transform={placement || undefined}>
           <g
             className="vine-sway"
             style={
@@ -230,22 +259,24 @@ export function VineGarden({
           </g>
 
             {/* Labels sit outside the rotated group, so a vine growing in from
-                a side edge still gets horizontal, readable text at its tip. */}
+                a side edge still gets horizontal, readable text. In frame
+                layout they're pinned to the vine's edge at a fixed size, so
+                every label lines up instead of drifting with the tip. */}
             <text
-              x={labelX + (labelAnchor === "end" ? -6 : 6) * geometry.girth * labelScale}
-              y={labelY - 4 * geometry.girth * labelScale}
+              x={isFrame ? labelX : labelX + (labelAnchor === "end" ? -6 : 6) * geometry.girth}
+              y={isFrame ? labelY - 5 : labelY - 4 * geometry.girth}
               textAnchor={labelAnchor}
-              fontSize={9 * geometry.girth * labelScale}
+              fontSize={nameSize}
               fontWeight="600"
               className="fill-foreground"
             >
               {plot.name}
             </text>
             <text
-              x={labelX + (labelAnchor === "end" ? -6 : 6) * geometry.girth * labelScale}
-              y={labelY + 7 * geometry.girth * labelScale}
+              x={isFrame ? labelX : labelX + (labelAnchor === "end" ? -6 : 6) * geometry.girth}
+              y={isFrame ? labelY + 8 : labelY + 7 * geometry.girth}
               textAnchor={labelAnchor}
-              fontSize={8 * geometry.girth * labelScale}
+              fontSize={countSize}
               className="fill-muted-foreground"
             >
               {plot.completedCount} done
