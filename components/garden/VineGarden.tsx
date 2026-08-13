@@ -27,6 +27,14 @@ interface VineGardenProps {
    * category into a single portrait phone screen.
    */
   layout?: GardenLayout;
+  /**
+   * Frame layout only: the pixel size of the box this SVG fills. The viewBox
+   * is set to match it exactly (1 unit = 1px) so the drawing's edges *are* the
+   * container's edges — otherwise preserveAspectRatio letterboxes the canvas
+   * and the "edge" vines end up floating in the middle.
+   */
+  containerWidth?: number;
+  containerHeight?: number;
 }
 
 type Edge = "bottom" | "left" | "right";
@@ -37,18 +45,22 @@ const EDGE_ORDER: Edge[] = ["left", "right", "bottom"];
 // +90 turns "up" into "right" (left edge) and -90 into "left" (right edge).
 const EDGE_ANGLE: Record<Edge, number> = { bottom: 0, left: 90, right: -90 };
 
-export function VineGarden({ plots, layout = "row" }: VineGardenProps) {
+export function VineGarden({
+  plots,
+  layout = "row",
+  containerWidth = 375,
+  containerHeight = 420,
+}: VineGardenProps) {
   const scene = useMemo(() => {
     const tallest = plots.length
       ? Math.max(...plots.map((p) => vineHeight(p.completedCount)))
       : vineHeight(0);
 
     if (layout === "frame") {
-      // Portrait canvas roughly phone-shaped. The box grows more slowly than
-      // the vines do, so vines take up an increasing share of it over time
-      // rather than staying a constant relative size.
-      const height = Math.round(260 + tallest * 1.2);
-      const width = Math.round(height * 0.52);
+      // 1 unit = 1 px, matching the container exactly, so the vines really do
+      // root on the container's own left, right and bottom edges.
+      const width = containerWidth;
+      const height = containerHeight;
 
       // Spread categories around the three edges, cycling so they alternate.
       const byEdge: Record<Edge, number[]> = { bottom: [], left: [], right: [] };
@@ -77,10 +89,10 @@ export function VineGarden({ plots, layout = "row" }: VineGardenProps) {
             baseY = height + BOTTOM_OVERSHOOT;
           } else if (edge === "left") {
             cx = -BOTTOM_OVERSHOOT;
-            baseY = height * (0.2 + 0.62 * t);
+            baseY = height * (0.12 + 0.76 * t);
           } else {
             cx = width + BOTTOM_OVERSHOOT;
-            baseY = height * (0.2 + 0.62 * t);
+            baseY = height * (0.12 + 0.76 * t);
           }
 
           const plot = plots[plotIndex];
@@ -131,7 +143,7 @@ export function VineGarden({ plots, layout = "row" }: VineGardenProps) {
     });
 
     return { width, height, vines, layout };
-  }, [plots, layout]);
+  }, [plots, layout, containerWidth, containerHeight]);
 
   return (
     <svg
@@ -159,7 +171,7 @@ export function VineGarden({ plots, layout = "row" }: VineGardenProps) {
         // The frame canvas is much narrower in user units than the row one, so
         // it magnifies more on screen — labels need to be proportionally
         // smaller to come out as readable phone-sized text rather than huge.
-        const labelScale = scene.layout === "frame" ? 0.55 : 1;
+        const labelScale = 1; // frame units are already pixels, so no rescale needed
         return (
           <g key={plot.listId}>
           {/* This inner group carries the edge placement as an SVG attribute

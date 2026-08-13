@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Minus, Plus, Locate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGardenData } from "@/lib/hooks/useGarden";
@@ -18,6 +18,25 @@ export function VineGardenCanvas() {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
   const [dragging, setDragging] = useState(false);
+
+  // The frame layout draws in real pixels, so it needs the box's actual size —
+  // otherwise the canvas is letterboxed inside the container and the "edge"
+  // vines float in the middle instead of touching the sides.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState({ w: 375, h: 420 });
+
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const rect = entries[0].contentRect;
+      // setState lives in the observer callback, not the effect body, so this
+      // is a subscription rather than a cascading render.
+      setBox({ w: Math.max(1, Math.round(rect.width)), h: Math.max(1, Math.round(rect.height)) });
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     dragRef.current = { startX: e.clientX, startY: e.clientY, originX: offset.x, originY: offset.y };
@@ -53,22 +72,14 @@ export function VineGardenCanvas() {
   return (
     <>
       <div
+        ref={boxRef}
         className={dragging ? "absolute inset-0 cursor-grabbing" : "absolute inset-0 cursor-grab"}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
       >
-        {/* Anchored to the bottom edge; the stems are drawn past it and get
-            clipped, so there's no empty strip under the vines. */}
-        {/* Fills the whole area rather than sizing itself from the drawing's
-            own aspect ratio — that left unfillable gaps on narrow screens.
-            The SVG covers this box (see preserveAspectRatio in VineGarden),
-            so there is never empty space, and pan/zoom ride on top. */}
-        {/* --garden-fit (globals.css) is the per-breakpoint default size —
-            larger on phones, where the fitted drawing would otherwise be
-            tiny. Growth happens from the bottom edge so the vines stay
-            rooted there, and the user's zoom multiplies on top. */}
+        {/* Fills the whole area; pan/zoom ride on top via the transform. */}
         <div
           className="garden-fit absolute inset-0"
           style={{
@@ -76,7 +87,12 @@ export function VineGardenCanvas() {
             transformOrigin: "bottom center",
           }}
         >
-          <VineGarden plots={plots} layout={isMobile ? "frame" : "row"} />
+          <VineGarden
+            plots={plots}
+            layout={isMobile ? "frame" : "row"}
+            containerWidth={box.w}
+            containerHeight={box.h}
+          />
         </div>
       </div>
 
