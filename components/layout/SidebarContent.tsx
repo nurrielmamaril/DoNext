@@ -14,14 +14,8 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import {
-  CalendarClock,
-  CheckCircle2,
-  ListTodo,
-  Mail,
-  NotebookPen,
   Settings,
   Plus,
-  LayoutDashboard,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -35,15 +29,7 @@ import { ListFormDialog } from "@/components/lists/ListFormDialog";
 import { SidebarListItem } from "@/components/lists/SidebarListItem";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { AppearanceMenu } from "@/components/layout/AppearanceMenu";
-
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/tasks", label: "All Tasks", icon: ListTodo },
-  { href: "/deadlines", label: "Deadlines", icon: CalendarClock },
-  { href: "/completed", label: "Completed", icon: CheckCircle2 },
-  { href: "/scheduled-emails", label: "Scheduled Emails", icon: Mail },
-  { href: "/notes", label: "General Notes", icon: NotebookPen },
-];
+import { navItems } from "@/components/layout/navItems";
 
 interface SidebarContentProps {
   userEmail: string;
@@ -126,6 +112,12 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
                 render={
                   <Link
                     href={item.href}
+                    // Every page under (app) is dynamic (the layout reads the
+                    // auth cookie), and dynamic routes are NOT prefetched by
+                    // default — so each tap paid for a full server round-trip
+                    // before anything moved on screen. prefetch pulls the
+                    // whole payload up front, making the tap instant.
+                    prefetch
                     onClick={onNavigate}
                     className={cn(
                       "flex items-center gap-2 rounded-md px-2 py-2.5 text-sm md:py-1.5",
@@ -191,6 +183,7 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
             render={
               <Link
                 href="/settings"
+                prefetch
                 onClick={onNavigate}
                 className={cn(
                   "flex items-center gap-2 rounded-md px-2 py-2.5 text-sm hover:bg-accent/50 md:py-1.5",
