@@ -28,12 +28,7 @@ export function MobileTopBar({ userEmail }: { userEmail: string }) {
       {/* relative + z-30 keeps the bar (and its menu button) above the
           dashboard's viewport-pinned garden layer, which would otherwise
           paint over it and eat taps. */}
-      {/* The name pins this bar during route view transitions, so the page
-          below it crossfades while the bar itself holds still. */}
-      <header
-        style={{ viewTransitionName: "app-topbar" }}
-        className="safe-top relative z-30 flex items-center gap-2 border-b bg-sidebar px-3 py-2 text-sidebar-foreground"
-      >
+      <header className="safe-top relative z-30 flex items-center gap-2 border-b bg-sidebar px-3 py-2 text-sidebar-foreground">
         <Button
           variant="ghost"
           size="icon"
