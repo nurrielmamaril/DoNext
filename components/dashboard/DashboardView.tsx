@@ -109,21 +109,12 @@ export function DashboardView() {
   }
 
   return (
-    // The garden fills the page behind everything; the widgets float on top.
-    // pointer-events-none on the overlay lets drags in empty space reach the
-    // garden underneath, while the cards themselves stay interactive.
-    <div className="relative overflow-hidden md:h-full">
-      {/* `fixed` on mobile pins the garden to the real viewport, so it always
-          sits on the bottom edge of the screen no matter how the surrounding
-          layout resolves its height. On desktop it goes back to filling this
-          container, beside the sidebar. z-0 keeps it behind the top bar and
-          cards — a positioned element would otherwise paint over them and
-          swallow taps meant for the menu button. */}
-      <div className="fixed inset-0 z-0 md:absolute">
-        <VineGardenCanvas />
-      </div>
-
-      <div className="pointer-events-none relative z-10 mx-auto max-w-4xl p-4 md:p-6">
+    // Mobile: a plain column — cards first, garden filling whatever space is
+    // left below them, so the vines never sit behind the cards.
+    // Desktop (md+): the garden goes back to filling the whole panel behind
+    // the widgets, which is what makes the wide layout look good.
+    <div className="relative flex h-full flex-col overflow-hidden md:block">
+      <div className="pointer-events-none relative z-10 mx-auto w-full max-w-4xl shrink-0 p-4 md:p-6">
       <div className="pointer-events-auto flex items-center justify-between pb-4 md:pb-6">
         <h2 className="font-heading text-xl">Dashboard</h2>
         <div className="flex gap-2">
@@ -177,6 +168,13 @@ export function DashboardView() {
           />
         </div>
       )}
+      </div>
+
+      {/* In flow on mobile (takes the leftover height under the cards), an
+          absolute backdrop on desktop. z-0 keeps it behind the cards and the
+          top bar either way. */}
+      <div className="relative z-0 min-h-0 flex-1 md:absolute md:inset-0">
+        <VineGardenCanvas />
       </div>
 
       <TaskEditorDialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen} />

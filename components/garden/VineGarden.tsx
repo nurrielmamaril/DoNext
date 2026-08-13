@@ -156,6 +156,10 @@ export function VineGarden({ plots, layout = "row" }: VineGardenProps) {
         const amplitude = 5.2 + (i % 3) * 1.1;
         const drift = 4 + (i % 2) * 2;
         const flutterAmplitude = 1.5 + (i % 2) * 0.6;
+        // The frame canvas is much narrower in user units than the row one, so
+        // it magnifies more on screen — labels need to be proportionally
+        // smaller to come out as readable phone-sized text rather than huge.
+        const labelScale = scene.layout === "frame" ? 0.55 : 1;
         return (
           <g key={plot.listId}>
           {/* This inner group carries the edge placement as an SVG attribute
@@ -216,20 +220,20 @@ export function VineGarden({ plots, layout = "row" }: VineGardenProps) {
             {/* Labels sit outside the rotated group, so a vine growing in from
                 a side edge still gets horizontal, readable text at its tip. */}
             <text
-              x={labelX + (labelAnchor === "end" ? -6 : 6) * geometry.girth}
-              y={labelY - 4 * geometry.girth}
+              x={labelX + (labelAnchor === "end" ? -6 : 6) * geometry.girth * labelScale}
+              y={labelY - 4 * geometry.girth * labelScale}
               textAnchor={labelAnchor}
-              fontSize={9 * geometry.girth}
+              fontSize={9 * geometry.girth * labelScale}
               fontWeight="600"
               className="fill-foreground"
             >
               {plot.name}
             </text>
             <text
-              x={labelX + (labelAnchor === "end" ? -6 : 6) * geometry.girth}
-              y={labelY + 7 * geometry.girth}
+              x={labelX + (labelAnchor === "end" ? -6 : 6) * geometry.girth * labelScale}
+              y={labelY + 7 * geometry.girth * labelScale}
               textAnchor={labelAnchor}
-              fontSize={8 * geometry.girth}
+              fontSize={8 * geometry.girth * labelScale}
               className="fill-muted-foreground"
             >
               {plot.completedCount} done
