@@ -49,8 +49,11 @@ interface SidebarContentProps {
   userEmail: string;
   /** Desktop only — the mobile drawer has no collapsed state. */
   onToggleCollapsed?: () => void;
-  /** Mobile only — closes the drawer after tapping a link. */
-  onNavigate?: () => void;
+  /**
+   * Mobile only — called with the tapped link's href so the drawer can decide
+   * when to close. It deliberately does NOT close on tap: see MobileTopBar.
+   */
+  onNavigate?: (href: string) => void;
 }
 
 // Shared by the desktop sidebar and the mobile drawer so there is only ever
@@ -126,7 +129,7 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
                 render={
                   <Link
                     href={item.href}
-                    onClick={onNavigate}
+                    onClick={() => onNavigate?.(item.href)}
                     className={cn(
                       "flex items-center gap-2 rounded-md px-2 py-2.5 text-sm md:py-1.5",
                       isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
@@ -191,7 +194,7 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
             render={
               <Link
                 href="/settings"
-                onClick={onNavigate}
+                onClick={() => onNavigate?.("/settings")}
                 className={cn(
                   "flex items-center gap-2 rounded-md px-2 py-2.5 text-sm hover:bg-accent/50 md:py-1.5",
                   pathname === "/settings" && "bg-accent text-accent-foreground"

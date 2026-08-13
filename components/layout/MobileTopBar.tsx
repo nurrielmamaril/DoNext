@@ -63,7 +63,20 @@ export function MobileTopBar({ userEmail }: { userEmail: string }) {
               <X className="size-5" />
             </DialogPrimitive.Close>
 
-            <SidebarContent userEmail={userEmail} onNavigate={() => setOpen(false)} />
+            {/* Deliberately does NOT close on tap. Closing immediately tore
+                the drawer away while the next page was still loading, so the
+                page you were leaving flashed back into view for a moment
+                before the new one arrived — that flash was the "flicker".
+                The drawer now stays up until the route actually changes (see
+                the pathname check above), so it lifts to reveal the new page
+                directly. The one case pathname can't catch is tapping the
+                section you're already on, which is closed here. */}
+            <SidebarContent
+              userEmail={userEmail}
+              onNavigate={(href) => {
+                if (href === pathname) setOpen(false);
+              }}
+            />
           </DialogPrimitive.Popup>
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>

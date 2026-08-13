@@ -19,8 +19,8 @@ interface SidebarListItemProps {
   list: { id: string; name: string; logo_url: string | null };
   onRename: () => void;
   onDelete: () => void;
-  /** Mobile only — closes the drawer after tapping a category. */
-  onNavigate?: () => void;
+  /** Mobile only — reports the tapped href so the drawer can time its close. */
+  onNavigate?: (href: string) => void;
 }
 
 export function SidebarListItem({ list, onRename, onDelete, onNavigate }: SidebarListItemProps) {
@@ -55,7 +55,7 @@ export function SidebarListItem({ list, onRename, onDelete, onNavigate }: Sideba
       </button>
       <Link
         href={`/lists/${list.id}`}
-        onClick={onNavigate}
+        onClick={() => onNavigate?.(`/lists/${list.id}`)}
         className="flex min-w-0 flex-1 items-center gap-2"
       >
         <CategoryAvatar listId={list.id} name={list.name} logoUrl={list.logo_url} size="sm" />
