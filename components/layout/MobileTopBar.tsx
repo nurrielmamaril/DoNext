@@ -41,13 +41,24 @@ export function MobileTopBar({ userEmail }: { userEmail: string }) {
       </header>
 
       <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
-        <DialogPrimitive.Portal>
-          <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/40 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
+        {/* keepMounted so tapping a section doesn't tear this whole subtree
+            (the sortable category list, every tooltip) down at the exact
+            moment the next page is mounting. On desktop the sidebar simply
+            stays put, and that is why navigation there has always felt
+            clean; this gives mobile the same deal. */}
+        <DialogPrimitive.Portal keepMounted>
+          {/* The drawer opens at its usual pace but leaves in half the time,
+              so it is out of the way before the next page paints instead of
+              sliding across it. The exit animation is kept (rather than
+              removed outright) because Base UI waits for it to finish before
+              unmounting — with no animation at all the drawer can sit in its
+              "ending" state and stay on screen. */}
+          <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/40 data-open:duration-150 data-closed:duration-75 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
           <DialogPrimitive.Popup
             // A floating, fully rounded sheet rather than a full-bleed
             // rectangle — `drawer-inset` holds it clear of every edge
             // (including the notch) so all four corners actually show.
-            className="drawer-inset fixed z-50 flex w-[min(19rem,82vw)] flex-col overflow-hidden rounded-2xl border bg-sidebar text-sidebar-foreground shadow-2xl duration-200 data-open:animate-in data-open:slide-in-from-left data-closed:animate-out data-closed:slide-out-to-left"
+            className="drawer-inset fixed z-50 flex w-[min(19rem,82vw)] flex-col overflow-hidden rounded-2xl border bg-sidebar text-sidebar-foreground shadow-2xl data-open:duration-200 data-closed:duration-100 data-open:animate-in data-open:slide-in-from-left data-closed:animate-out data-closed:slide-out-to-left"
             aria-label="Navigation"
           >
             <DialogPrimitive.Close

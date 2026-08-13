@@ -34,7 +34,11 @@ function DashboardWidget({
   colorClass?: string;
 }) {
   return (
-    <Card className="bg-background/85 shadow-lg backdrop-blur-sm">
+    // Blur only from md up. A backdrop-filter over the constantly animating
+    // garden makes a phone GPU re-composite that whole area every frame,
+    // which is exactly the kind of load that makes a navigation judder. The
+    // more opaque background keeps the text just as readable without it.
+    <Card className="bg-background/95 shadow-lg md:bg-background/85 md:backdrop-blur-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <Icon className="size-4 text-muted-foreground" />
@@ -121,7 +125,7 @@ export function DashboardView() {
           <Button
             size="sm"
             variant="outline"
-            className="bg-background/90 shadow backdrop-blur-sm"
+            className="bg-background/95 shadow md:bg-background/90 md:backdrop-blur-sm"
             onClick={() => setListDialogOpen(true)}
           >
             <Plus className="size-4" /> New list
