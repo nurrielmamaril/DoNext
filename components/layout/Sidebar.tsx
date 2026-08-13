@@ -45,7 +45,9 @@ export function Sidebar({ userEmail }: { userEmail: string }) {
   return (
     <aside
       className="sidebar-aside relative hidden h-screen shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground md:flex"
-      style={{ width: "var(--sidebar-width)" }}
+      // The name pins the sidebar during route view transitions, so only the
+      // page beside it animates.
+      style={{ width: "var(--sidebar-width)", viewTransitionName: "app-sidebar" }}
     >
       <SidebarContent userEmail={userEmail} onToggleCollapsed={toggleCollapsed} />
 

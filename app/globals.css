@@ -368,6 +368,61 @@ html[data-sidebar-collapsed="true"] .sidebar-aside .sidebar-footer-row {
   bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* ---- Route transitions -------------------------------------------------
+   Switching sections crossfades with a short upward drift, iOS-style: the
+   outgoing page leaves quickly so it doesn't compete for attention, and the
+   incoming one arrives a touch slower once the old one is gone. Browsers
+   without the View Transitions API just swap instantly, as they do today. */
+::view-transition-old(.page-swap) {
+  animation: 110ms cubic-bezier(0.4, 0, 1, 1) both page-leave;
+}
+::view-transition-new(.page-swap) {
+  animation: 220ms cubic-bezier(0.16, 1, 0.3, 1) 90ms both page-arrive;
+}
+/* The wrapper is always the same size (it fills <main>), so the group has no
+   resize to animate — pinning it avoids any stretch of the snapshots. */
+::view-transition-group(.page-swap) {
+  animation-duration: 300ms;
+}
+@keyframes page-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes page-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* The sidebar and mobile top bar are named so they're snapshotted as their
+   own layers; holding them still is what makes the content look like it
+   moved rather than the whole window. */
+::view-transition-group(app-sidebar),
+::view-transition-group(app-topbar) {
+  animation: none;
+  z-index: 10;
+}
+::view-transition-old(app-sidebar),
+::view-transition-old(app-topbar) {
+  display: none;
+}
+::view-transition-new(app-sidebar),
+::view-transition-new(app-topbar) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
 /* The mobile nav drawer floats clear of every screen edge — including the
    notch and home indicator — so all four of its rounded corners are visible,
    the way an iOS sheet looks. */

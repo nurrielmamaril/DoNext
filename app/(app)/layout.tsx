@@ -1,3 +1,4 @@
+import { ViewTransition } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -26,7 +27,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           anchored to the bottom (the garden) falls below the fold. */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <MobileTopBar userEmail={email} />
-        <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+        {/* Only the page body animates between routes — the sidebar and top
+            bar are pinned by their own view-transition-names, so they stay
+            put while the content crossfades. This wrapper lives in the
+            layout, so it *persists* across routes and React reports the swap
+            as an update rather than an enter/exit; all three carry the same
+            class so the animation is identical whichever fires. `default`
+            keeps it from animating during unrelated transitions. */}
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <ViewTransition
+            update="page-swap"
+            enter="page-swap"
+            exit="page-swap"
+            default="none"
+          >
+            <div className="h-full">{children}</div>
+          </ViewTransition>
+        </main>
       </div>
     </div>
   );

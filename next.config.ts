@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  experimental: {
+    // Lets route navigations run through the browser's View Transitions API,
+    // so moving between pages crossfades instead of snapping. Next swaps in a
+    // React build that exports <ViewTransition> when this is on.
+    viewTransition: true,
+  },
   webpack: (config, { dev }) => {
     if (dev) {
       // Windows' native file-watcher (ReadDirectoryChangesW via libuv) crashes
