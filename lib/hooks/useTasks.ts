@@ -25,7 +25,7 @@ export interface TaskFilter {
   overdueOnly?: boolean;
 }
 
-function tasksKey(filter: TaskFilter) {
+export function tasksKey(filter: TaskFilter) {
   return ["tasks", filter];
 }
 
@@ -36,11 +36,13 @@ function sanitizeIlikeTerm(term: string): string {
   return term.replace(/[\\%_,]/g, (ch) => `\\${ch}`);
 }
 
-export function useTasksQuery(filter: TaskFilter) {
-  const supabase = createClient();
-  return useQuery({
-    queryKey: tasksKey(filter),
-    queryFn: async () => {
+// Pulled out of the hook so the same fetch can be warmed ahead of time (see
+// lib/hooks/useNavPrefetch.ts) — a page that already has its rows renders
+// full instead of flashing an empty screen while it loads.
+export async function fetchTasks(
+  supabase: ReturnType<typeof createClient>,
+  filter: TaskFilter
+) {
       let query = supabase.from("tasks").select("*, lists(id, name, color)").is("deleted_at", null);
       const today = todayISO();
 
@@ -82,7 +84,13 @@ export function useTasksQuery(filter: TaskFilter) {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
-    },
+}
+
+export function useTasksQuery(filter: TaskFilter) {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: tasksKey(filter),
+    queryFn: () => fetchTasks(supabase, filter),
   });
 }
 

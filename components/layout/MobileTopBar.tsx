@@ -6,6 +6,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidebarContent } from "@/components/layout/SidebarContent";
+import { useNavPrefetch } from "@/lib/hooks/useNavPrefetch";
 
 // Below `md` the fixed-width sidebar would eat most of a phone screen, so the
 // same nav moves into a slide-in drawer behind a hamburger.
@@ -13,6 +14,7 @@ export function MobileTopBar({ userEmail }: { userEmail: string }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const [lastPathname, setLastPathname] = useState(pathname);
+  const prefetchNav = useNavPrefetch();
 
   // Close on navigation. Links call onNavigate directly; this also covers
   // back/forward and programmatic redirects. Adjusting state during render
@@ -33,6 +35,10 @@ export function MobileTopBar({ userEmail }: { userEmail: string }) {
           variant="ghost"
           size="icon"
           aria-label="Open menu"
+          // Start loading the sections' contents as the finger goes down, so
+          // by the time a section is picked its rows are already in hand and
+          // the page appears filled rather than blank.
+          onPointerDown={prefetchNav}
           onClick={() => setOpen(true)}
         >
           <Menu className="size-5" />

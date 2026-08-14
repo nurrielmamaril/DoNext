@@ -3,21 +3,28 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 
-function notesKey(listId: string | null) {
+export function notesKey(listId: string | null) {
   return ["notes", listId ?? "general"];
+}
+
+// Exported so the notes page can be warmed before it's opened — see
+// lib/hooks/useNavPrefetch.ts.
+export async function fetchNotes(
+  supabase: ReturnType<typeof createClient>,
+  listId: string | null
+) {
+  let query = supabase.from("notes").select("*");
+  query = listId ? query.eq("list_id", listId) : query.is("list_id", null);
+  const { data, error } = await query.order("position", { ascending: true });
+  if (error) throw error;
+  return data;
 }
 
 export function useNotesQuery(listId: string | null) {
   const supabase = createClient();
   return useQuery({
     queryKey: notesKey(listId),
-    queryFn: async () => {
-      let query = supabase.from("notes").select("*");
-      query = listId ? query.eq("list_id", listId) : query.is("list_id", null);
-      const { data, error } = await query.order("position", { ascending: true });
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchNotes(supabase, listId),
   });
 }
 
