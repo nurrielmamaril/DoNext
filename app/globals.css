@@ -381,6 +381,14 @@ html[data-sidebar-collapsed="true"] .sidebar-aside .sidebar-footer-row {
 .safe-top {
   padding-top: env(safe-area-inset-top, 0px);
 }
+/* The mobile app bar gets extra room on top of the inset. Padding the inset
+   alone puts the bar's content flush against the bottom edge of the status
+   bar, and in standalone mode iOS paints a soft glass band just under that
+   edge — which is what was smearing the DoNext wordmark. The bar still runs
+   up under the status bar so its colour blends; only its contents move down. */
+.safe-top-bar {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 1.25rem);
+}
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
