@@ -54,11 +54,14 @@ export function useCreateReminder(taskId: string) {
       method = "email",
       is_recurring = false,
       recurrence_rule = null,
+      recipient_email = null,
     }: {
       remind_at: string;
       method?: ReminderMethod;
       is_recurring?: boolean;
       recurrence_rule?: ReminderRecurrenceRule | null;
+      /** Null means "send it to me" — the account's own email. */
+      recipient_email?: string | null;
     }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not signed in");
@@ -71,6 +74,7 @@ export function useCreateReminder(taskId: string) {
           method,
           is_recurring,
           recurrence_rule,
+          recipient_email,
         })
         .select()
         .single();

@@ -115,21 +115,34 @@ async function sendBrowserPush(userId: string, taskTitle: string) {
   return sent;
 }
 
-async function sendEmail(userId: string, task: TaskInfo): Promise<{ ok: boolean; debug: string }> {
+// recipientEmail is the address this reminder was addressed to, or null for
+// "send it to me", in which case the owner's own address is looked up as before.
+async function sendEmail(
+  userId: string,
+  task: TaskInfo,
+  recipientEmail: string | null
+): Promise<{ ok: boolean; debug: string }> {
   if (!RESEND_API_KEY) return { ok: false, debug: "no RESEND_API_KEY configured" };
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("email")
-    .eq("id", userId)
-    .single();
-  if (profileError) return { ok: false, debug: `profile lookup error: ${profileError.message}` };
-  if (!profile?.email) return { ok: false, debug: "profile has no email" };
+  let to = recipientEmail?.trim() || "";
+  if (!to) {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", userId)
+      .single();
+    if (profileError) return { ok: false, debug: `profile lookup error: ${profileError.message}` };
+    if (!profile?.email) return { ok: false, debug: "profile has no email" };
+    to = profile.email;
+  }
 
   const due = dueLabel(task);
   const subject = due ? `Reminder: ${task.title} | Due ${due}` : `Reminder: ${task.title}`;
   const htmlLines = [
-    `<p>This is a reminder for your task:</p>`,
+    // "your task" only reads right when it is going to the owner.
+    recipientEmail?.trim()
+      ? `<p>A reminder was set for this task:</p>`
+      : `<p>This is a reminder for your task:</p>`,
     `<p><strong>Title:</strong> ${task.title}</p>`,
   ];
   if (task.description) {
@@ -145,7 +158,7 @@ async function sendEmail(userId: string, task: TaskInfo): Promise<{ ok: boolean;
     },
     body: JSON.stringify({
       from: RESEND_FROM,
-      to: [profile.email],
+      to: [to],
       subject,
       html: htmlLines.join("\n"),
     }),
@@ -164,7 +177,7 @@ Deno.serve(async (req) => {
   const { data: dueReminders, error } = await supabase
     .from("reminders")
     .select(
-      "id, user_id, task_id, status, method, remind_at, snoozed_until, is_recurring, recurrence_rule, tasks(title, description, due_date, due_time)"
+      "id, user_id, task_id, status, method, remind_at, snoozed_until, is_recurring, recurrence_rule, recipient_email, tasks(title, description, due_date, due_time)"
     )
     .or(
       `and(status.eq.pending,remind_at.lte.${now}),and(status.eq.snoozed,snoozed_until.lte.${now})`
@@ -188,7 +201,7 @@ Deno.serve(async (req) => {
 
     let ok: boolean;
     if (reminder.method === "email") {
-      const result = await sendEmail(reminder.user_id, task);
+      const result = await sendEmail(reminder.user_id, task, reminder.recipient_email);
       ok = result.ok;
       debugInfo.push(result.debug);
     } else {

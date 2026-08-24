@@ -43,18 +43,28 @@ export function ReminderList({ taskId }: { taskId: string }) {
   const snoozeReminder = useSnoozeReminder(taskId);
   const [newDateTime, setNewDateTime] = useState("");
   const [recurrenceRule, setRecurrenceRule] = useState<ReminderRecurrenceRule | null>(null);
+  const [recipient, setRecipient] = useState("");
 
   async function handleAdd() {
     if (!newDateTime) return;
+    const to = recipient.trim();
+    // Same light check the send-email dialog uses: catch an obvious typo
+    // without pretending to fully validate an address.
+    if (to && !/^[^@s]+@[^@s]+.[^@s]+$/.test(to)) {
+      toast.error("That doesn't look like a valid email address");
+      return;
+    }
     try {
       await createReminder.mutateAsync({
         remind_at: new Date(newDateTime).toISOString(),
         method: "email",
         is_recurring: recurrenceRule !== null,
         recurrence_rule: recurrenceRule,
+        recipient_email: to || null,
       });
       setNewDateTime("");
       setRecurrenceRule(null);
+      setRecipient("");
       toast.success("Reminder set");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't set reminder");
@@ -97,6 +107,11 @@ export function ReminderList({ taskId }: { taskId: string }) {
                 <Mail className="size-3.5 shrink-0 text-muted-foreground" aria-label="Email" />
                 <span className="flex-1">
                   {format(new Date(when), "MMM d, yyyy 'at' h:mm a")}
+                  {reminder.recipient_email && (
+                    <span className="ml-1.5 text-xs text-muted-foreground">
+                      to {reminder.recipient_email}
+                    </span>
+                  )}
                   {reminder.is_recurring && reminder.recurrence_rule && (
                     <span className="ml-1.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <Repeat className="size-3" />
@@ -153,10 +168,21 @@ export function ReminderList({ taskId }: { taskId: string }) {
           Add
         </Button>
       </div>
+      <div className="flex items-center gap-2 pl-6">
+        <Input
+          type="email"
+          value={recipient}
+          onChange={(e) => setRecipient(e.target.value)}
+          placeholder="Send to someone else (optional)"
+          className="flex-1"
+        />
+      </div>
       <div className="pl-6">
         <ReminderRecurrencePicker rule={recurrenceRule} onChange={setRecurrenceRule} />
       </div>
-      <p className="pl-6 text-xs text-muted-foreground">Reminders are sent to your email.</p>
+      <p className="pl-6 text-xs text-muted-foreground">
+        Leave the address blank to send the reminder to yourself.
+      </p>
     </div>
   );
 }

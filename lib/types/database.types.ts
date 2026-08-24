@@ -310,6 +310,7 @@ export interface Database {
           remind_at: string;
           method: ReminderMethod;
           status: ReminderStatus;
+          recipient_email: string | null;
           snoozed_until: string | null;
           is_recurring: boolean;
           recurrence_rule: { unit: "day" | "week" | "month"; interval: number } | null;
@@ -322,6 +323,7 @@ export interface Database {
           remind_at: string;
           method?: ReminderMethod;
           status?: ReminderStatus;
+          recipient_email?: string | null;
           snoozed_until?: string | null;
           is_recurring?: boolean;
           recurrence_rule?: { unit: "day" | "week" | "month"; interval: number } | null;
@@ -334,6 +336,7 @@ export interface Database {
           remind_at?: string;
           method?: ReminderMethod;
           status?: ReminderStatus;
+          recipient_email?: string | null;
           snoozed_until?: string | null;
           is_recurring?: boolean;
           recurrence_rule?: { unit: "day" | "week" | "month"; interval: number } | null;
