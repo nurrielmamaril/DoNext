@@ -223,7 +223,17 @@ html.dark[data-accent="mustard"] {
 }
 
 .rich-text-content {
-  font-size: 0.875rem;
+  /* 16px on phones, deliberately. iOS zooms the whole page whenever you focus
+     a text field smaller than 16px — that is what blew the task dialog up to
+     full screen on tap, and left the page zoomed (blurry, scrolled off the
+     top) afterwards. Every other field already follows this rule via the
+     Input/Textarea components' text-base + md:text-sm pairing. */
+  font-size: 1rem;
+}
+@media (min-width: 768px) {
+  .rich-text-content {
+    font-size: 0.875rem;
+  }
 }
 
 /* A long word, pasted URL or code string used to stretch the editor wider than

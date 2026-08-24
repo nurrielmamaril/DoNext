@@ -126,17 +126,10 @@ export function DashboardView() {
           >
             <Plus className="size-4" /> New list
           </Button>
-          {/* Hidden on phones: this dialog has no client picker, so a task
-              made here silently lands in Inbox with no way to choose where it
-              goes. Adding one from inside a client's own list keeps it with
-              that client. */}
-          <Button
-            size="sm"
-            className="hidden shadow md:inline-flex"
-            onClick={() => setTaskDialogOpen(true)}
-          >
-            <Plus className="size-4" /> New task
-          </Button>
+          {/* No New task button here on purpose: this dialog has no client
+              picker, so a task created from the dashboard would land in Inbox
+              with no way to choose where it goes. Add tasks from inside a
+              client's own list instead — same on phone and desktop. */}
         </div>
       </div>
 
