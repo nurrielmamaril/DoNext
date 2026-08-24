@@ -83,7 +83,7 @@ export function RichTextEditor({ content, onChange, onImagePaste, placeholder }:
   });
 
   return (
-    <div className="rounded-md border">
+    <div className="min-w-0 rounded-md border">
       <RichTextToolbar editor={editor} />
       <EditorContent editor={editor} />
     </div>

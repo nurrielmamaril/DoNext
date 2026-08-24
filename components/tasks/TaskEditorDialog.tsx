@@ -109,16 +109,23 @@ function TaskEditorForm({
     // The list a task belongs to is set at creation time (or changed via
     // "Move to" on the task's menu) rather than in this form.
     const list_id = isEditing ? (task?.list_id ?? null) : (defaultListId ?? null);
+    // A cleared date or time input reports "", which Postgres' date/time
+    // columns reject — that is why saving a task with a due date but no due
+    // time (or the reverse) errored. Blank means "not set", so send null.
+    const dates = {
+      due_date: values.due_date?.trim() ? values.due_date : null,
+      due_time: values.due_time?.trim() ? values.due_time : null,
+    };
     const recurrenceFields = {
       is_recurring: recurrenceRule !== null,
       recurrence_rule: recurrenceRule,
     };
     try {
       if (isEditing && task?.id) {
-        await updateTask.mutateAsync({ id: task.id, ...values, list_id, ...recurrenceFields });
+        await updateTask.mutateAsync({ id: task.id, ...values, ...dates, list_id, ...recurrenceFields });
         toast.success("Task updated");
       } else {
-        await createTask.mutateAsync({ ...values, list_id, ...recurrenceFields });
+        await createTask.mutateAsync({ ...values, ...dates, list_id, ...recurrenceFields });
         toast.success("Task created");
       }
       onOpenChange(false);

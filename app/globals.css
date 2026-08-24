@@ -225,6 +225,21 @@ html.dark[data-accent="mustard"] {
 .rich-text-content {
   font-size: 0.875rem;
 }
+
+/* A long word, pasted URL or code string used to stretch the editor wider than
+   its dialog, which is what forced the whole popup to scroll sideways. Content
+   wraps instead. */
+.rich-text-content,
+.rich-text-content p,
+.rich-text-content li,
+.rich-text-content h1,
+.rich-text-content h2,
+.rich-text-content blockquote,
+.rich-text-content a {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+}
 .rich-text-content p {
   margin: 0.25rem 0;
 }
