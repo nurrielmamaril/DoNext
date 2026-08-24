@@ -198,7 +198,12 @@ export function TaskList({
 
   return (
     <div className={fullWidth ? "w-full" : "mx-auto max-w-2xl"}>
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-6 pb-3">
+      {/* Pinned while the task list scrolls, so the list's name and its
+          filters stay reachable instead of disappearing off the top. <main>
+          is the scrolling element, so top-0 parks this at the top of the
+          visible area; the solid background keeps rows from showing through
+          as they pass underneath. */}
+      <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b bg-background px-4 pt-6 pb-3">
         {selectionMode ? (
           <>
             <span className="text-sm font-medium">{selectedTasks.length} selected</span>
@@ -246,7 +251,7 @@ export function TaskList({
                     value={searchInput}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     placeholder="Search..."
-                    className="h-7 w-40 pl-7 text-[0.8rem]"
+                    className="h-7 w-40 pl-7 md:text-[0.8rem]"
                   />
                 </div>
               )}
