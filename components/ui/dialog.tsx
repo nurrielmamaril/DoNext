@@ -104,7 +104,11 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        // Floats at the bottom of the dialog instead of sitting at the end of
+        // a long form, so Save and Cancel are reachable without scrolling to
+        // the very bottom. The background is opaque (not muted/50) because
+        // the form now scrolls underneath it.
+        "sticky -bottom-4 z-10 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted p-4 sm:flex-row sm:justify-end",
         className
       )}
       {...props}
