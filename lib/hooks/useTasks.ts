@@ -23,6 +23,8 @@ export interface TaskFilter {
   listIds?: string[];
   priorities?: TaskPriority[];
   overdueOnly?: boolean;
+  /** true = only repeating tasks, false = only one-off ones, omitted = both. */
+  recurring?: boolean;
 }
 
 export function tasksKey(filter: TaskFilter) {
@@ -77,6 +79,9 @@ export async function fetchTasks(
       }
       if (filter.overdueOnly) {
         query = query.lt("due_date", today).neq("status", "completed");
+      }
+      if (filter.recurring !== undefined) {
+        query = query.eq("is_recurring", filter.recurring);
       }
 
       const { data, error } = await query

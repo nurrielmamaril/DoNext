@@ -75,6 +75,13 @@ interface TaskListProps {
   allowQuickAdd?: boolean;
   defaultListId?: string | null;
   fullWidth?: boolean;
+  /**
+   * Reordering writes positions 0..n-1 over whatever rows this list shows, so
+   * it is only safe where the list covers every task in its scope. Two lists
+   * splitting one client's tasks would otherwise hand out the same positions
+   * twice and unsettle "Default order" everywhere else those tasks appear.
+   */
+  allowReorder?: boolean;
 }
 
 export function TaskList({
@@ -85,6 +92,7 @@ export function TaskList({
   allowQuickAdd = true,
   defaultListId = null,
   fullWidth = false,
+  allowReorder = true,
 }: TaskListProps) {
   const [sortKey, setSortKey] = useState<SortKey>("position");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
@@ -114,7 +122,7 @@ export function TaskList({
   const { data: tasks, isLoading } = useTasksQuery(effectiveFilter);
 
   const sorted = useMemo(() => sortTasks((tasks as TaskRow[]) ?? [], sortKey), [tasks, sortKey]);
-  const draggable = sortKey === "position" && !selectionMode;
+  const draggable = sortKey === "position" && !selectionMode && allowReorder;
   const selectedTasks = useMemo(
     () => sorted.filter((t) => selectedIds.has(t.id)),
     [sorted, selectedIds]

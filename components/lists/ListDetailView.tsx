@@ -13,29 +13,50 @@ interface ListDetailViewProps {
 
 export function ListDetailView({ listId, listName, logoUrl }: ListDetailViewProps) {
   return (
-    <div className="flex flex-col gap-6 p-6 lg:flex-row lg:items-stretch">
-      <div className="lg:w-1/2">
-        <div className="flex items-center justify-between gap-3 px-4 pt-2">
-          <div className="flex items-center gap-3">
-            <CategoryAvatar listId={listId} name={listName} logoUrl={logoUrl} size="lg" editable />
-            <p className="text-xs text-muted-foreground">
-              Click the circle to upload a logo or photo for this client.
-            </p>
-          </div>
-          <ListImportExport listId={listId} listName={listName} />
+    <div className="flex flex-col gap-8 p-6">
+      <div className="flex items-center justify-between gap-3 px-4 pt-2">
+        <div className="flex items-center gap-3">
+          <CategoryAvatar listId={listId} name={listName} logoUrl={logoUrl} size="lg" editable />
+          <p className="text-xs text-muted-foreground">
+            Click the circle to upload a logo or photo for this client.
+          </p>
         </div>
-        <TaskList
-          title={listName}
-          filter={{ listId }}
-          emptyMessage={`No tasks in ${listName} yet.`}
-          showListBadge={false}
-          defaultListId={listId}
-          fullWidth
-        />
+        <ListImportExport listId={listId} listName={listName} />
       </div>
-      <div className="lg:w-1/2">
-        <NotesPanel listId={listId} />
-      </div>
+
+      {/*
+        The client's name used to be the task list's own heading. Now that the
+        tasks are split in two, it needs to sit above both of them.
+      */}
+      <h1 className="font-heading -mb-3 px-4 text-2xl">{listName}</h1>
+
+      {/*
+        One client's work reads as three separate things: the one-off jobs you
+        work through, the ones that come back on a schedule, and the reference
+        material that is not a job at all. Splitting them keeps a long tail of
+        repeating tasks from burying the handful you actually have to do today.
+      */}
+      <TaskList
+        title="One-off Tasks"
+        filter={{ listId, recurring: false }}
+        emptyMessage={`No one-off tasks in ${listName} yet.`}
+        showListBadge={false}
+        defaultListId={listId}
+        fullWidth
+      />
+
+      <TaskList
+        title="Recurring Tasks"
+        filter={{ listId, recurring: true }}
+        emptyMessage={`Nothing repeats in ${listName} yet. Set a task to repeat and it will show up here.`}
+        showListBadge={false}
+        defaultListId={listId}
+        allowQuickAdd={false}
+        allowReorder={false}
+        fullWidth
+      />
+
+      <NotesPanel listId={listId} />
     </div>
   );
 }
