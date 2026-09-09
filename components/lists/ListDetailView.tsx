@@ -31,20 +31,11 @@ export function ListDetailView({ listId, listName, logoUrl }: ListDetailViewProp
       <h1 className="font-heading -mb-3 px-4 text-2xl">{listName}</h1>
 
       {/*
-        One client's work reads as three separate things: the one-off jobs you
-        work through, the ones that come back on a schedule, and the reference
-        material that is not a job at all. Splitting them keeps a long tail of
-        repeating tasks from burying the handful you actually have to do today.
+        One client's work reads as three separate things: the commitments that
+        come back on a schedule, the one-off jobs you work through, and the
+        reference material that is not a job at all. The recurring ones lead
+        because they are the standing shape of the account.
       */}
-      <TaskList
-        title="One-off Tasks"
-        filter={{ listId, recurring: false }}
-        emptyMessage={`No one-off tasks in ${listName} yet.`}
-        showListBadge={false}
-        defaultListId={listId}
-        fullWidth
-      />
-
       <TaskList
         title="Recurring Tasks"
         filter={{ listId, recurring: true }}
@@ -53,6 +44,15 @@ export function ListDetailView({ listId, listName, logoUrl }: ListDetailViewProp
         defaultListId={listId}
         allowQuickAdd={false}
         allowReorder={false}
+        fullWidth
+      />
+
+      <TaskList
+        title="One-off Tasks"
+        filter={{ listId, recurring: false }}
+        emptyMessage={`No one-off tasks in ${listName} yet.`}
+        showListBadge={false}
+        defaultListId={listId}
         fullWidth
       />
 
