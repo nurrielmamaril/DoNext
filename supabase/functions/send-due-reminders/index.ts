@@ -145,6 +145,20 @@ function localToday(timeZone: string): string {
   }).format(new Date());
 }
 
+/** Minutes past local midnight in `timeZone`, right now. */
+function localMinutesNow(timeZone: string): number {
+  const [h, m] = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+    .format(new Date())
+    .split(":")
+    .map(Number);
+  return h * 60 + m;
+}
+
 async function sendBrowserPush(
   userId: string,
   taskTitle: string,
@@ -296,12 +310,71 @@ async function notifyTasksComingDue(): Promise<{ notified: number }> {
   return { notified };
 }
 
+/**
+ * One summary a day for everything already overdue — "3 tasks overdue" rather
+ * than a separate nudge per task, which for a backlog would be unusable.
+ *
+ * Sent at the same local hour a dateless task is treated as due. The date is
+ * stamped whether or not anything was overdue, so a day with a clear list
+ * costs one check rather than one every minute until midnight.
+ */
+async function notifyOverdueBacklog(): Promise<{ notified: number }> {
+  const { data: subs } = await supabase.from("push_subscriptions").select("user_id");
+  const userIds = [...new Set((subs ?? []).map((s) => s.user_id))];
+  if (!userIds.length) return { notified: 0 };
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, timezone, overdue_notified_on")
+    .in("id", userIds);
+
+  const [dueH, dueM] = DEFAULT_DUE_TIME.split(":").map(Number);
+  const sendAfter = dueH * 60 + dueM;
+
+  let notified = 0;
+  for (const profile of profiles ?? []) {
+    const tz = profile.timezone || FALLBACK_TZ;
+    const today = localToday(tz);
+    if (profile.overdue_notified_on === today) continue;
+    if (localMinutesNow(tz) < sendAfter) continue;
+
+    const { data: overdue } = await supabase
+      .from("tasks")
+      .select("title, due_date")
+      .eq("user_id", profile.id)
+      .not("due_date", "is", null)
+      .lt("due_date", today)
+      .neq("status", "completed")
+      .is("deleted_at", null)
+      .order("due_date", { ascending: true });
+
+    if (overdue?.length) {
+      const sent = await sendBrowserPush(profile.id, "", {
+        title: overdue.length === 1 ? "1 task overdue" : `${overdue.length} tasks overdue`,
+        body:
+          overdue.length === 1
+            ? overdue[0].title
+            : `Oldest: ${overdue[0].title} · due ${formatDueDate(overdue[0].due_date!)}`,
+        tag: "overdue-digest",
+      });
+      if (sent > 0) notified++;
+    }
+
+    await supabase
+      .from("profiles")
+      .update({ overdue_notified_on: today })
+      .eq("id", profile.id);
+  }
+  return { notified };
+}
+
 Deno.serve(async (req) => {
   if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
   const dueTaskResult = await notifyTasksComingDue();
+  const overdueResult = await notifyOverdueBacklog();
 
   const now = new Date().toISOString();
 
@@ -364,6 +437,7 @@ Deno.serve(async (req) => {
       sent,
       failed,
       dueTasksNotified: dueTaskResult.notified,
+      overdueDigestsSent: overdueResult.notified,
       debugInfo,
     }),
     { headers: { "Content-Type": "application/json" } }

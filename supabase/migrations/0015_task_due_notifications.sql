@@ -14,3 +14,8 @@ create index tasks_due_notify_idx on tasks (due_date)
 -- browser's own zone here on sign-in, which is what makes a due time fire at
 -- that time on the machine that set it.
 alter table profiles add column timezone text;
+
+-- Anything already overdue gets one summary notification a day rather than a
+-- nudge per task. This records the local date that summary last went out, so
+-- the every-minute cron sends it once and then leaves you alone.
+alter table profiles add column overdue_notified_on date;

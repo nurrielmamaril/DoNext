@@ -21,6 +21,7 @@ export interface Database {
           email: string;
           display_name: string | null;
           timezone: string | null;
+          overdue_notified_on: string | null;
           created_at: string;
         };
         Insert: {
@@ -28,6 +29,7 @@ export interface Database {
           email: string;
           display_name?: string | null;
           timezone?: string | null;
+          overdue_notified_on?: string | null;
           created_at?: string;
         };
         Update: {
@@ -35,6 +37,7 @@ export interface Database {
           email?: string;
           display_name?: string | null;
           timezone?: string | null;
+          overdue_notified_on?: string | null;
           created_at?: string;
         };
         Relationships: [];
