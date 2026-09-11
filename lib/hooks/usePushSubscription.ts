@@ -27,15 +27,21 @@ export function useSubscribeToPush() {
       }
 
       const registration = await navigator.serviceWorker.ready;
-      let subscription = await registration.pushManager.getSubscription();
-      if (!subscription) {
-        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        if (!vapidPublicKey) throw new Error("Push notifications aren't configured yet");
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-        });
-      }
+
+      // The browser hangs on to its push subscription even after the push
+      // service has expired the endpoint and the server has dropped the row
+      // for it. Reusing that object re-registers the same dead endpoint, the
+      // next send comes back 410 Gone, the row is deleted again, and turning
+      // notifications on never sticks. Always start from a fresh endpoint.
+      const existing = await registration.pushManager.getSubscription();
+      if (existing) await existing.unsubscribe();
+
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) throw new Error("Push notifications aren't configured yet");
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      });
 
       const json = subscription.toJSON();
       const { data: userData } = await supabase.auth.getUser();
