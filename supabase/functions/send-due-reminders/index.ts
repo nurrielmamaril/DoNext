@@ -25,6 +25,17 @@ const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "DoNext <onboarding@resend.de
 // cron job, not end users — this shared secret takes the place of Supabase
 // Auth's JWT check so the endpoint isn't wide open to the internet.
 const CRON_SECRET = Deno.env.get("CRON_SECRET")!;
+// due_date and due_time are wall-clock values with no zone attached. The app
+// records the browser's own zone on the profile (see TimezoneSync); this is
+// only the fallback for a profile that has not reported one yet. Without it a
+// task due "9:00 AM" would fire at 9am UTC.
+const FALLBACK_TZ = Deno.env.get("REMINDER_TIMEZONE") ?? "America/New_York";
+// A task with a due date but no due time is treated as due at this hour.
+const DEFAULT_DUE_TIME = Deno.env.get("DEFAULT_DUE_TIME") ?? "09:00";
+// How the automatic nudges are paced: first at the due time, then every
+// REPEAT_MINUTES until the task is done, giving up REPEAT_WINDOW_HOURS later.
+const REPEAT_MINUTES = 30;
+const REPEAT_WINDOW_HOURS = 3;
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
@@ -83,16 +94,72 @@ function descriptionToHtml(description: string): string {
   return HTML_TAG_RE.test(description) ? description : `<p>${escapeHtml(description)}</p>`;
 }
 
-async function sendBrowserPush(userId: string, taskTitle: string) {
+/**
+ * How far `timeZone` is from UTC at this instant, in milliseconds. Formatting
+ * the date into the zone and reading the parts back as if they were UTC is the
+ * standard way to get this without pulling in a timezone library.
+ */
+function zoneOffsetMs(at: Date, timeZone: string): number {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    })
+      .formatToParts(at)
+      .map((p) => [p.type, p.value])
+  );
+  const asIfUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour) % 24,
+    Number(parts.minute),
+    Number(parts.second)
+  );
+  return asIfUtc - at.getTime();
+}
+
+/** The real instant a "YYYY-MM-DD" + "HH:MM" wall time in `timeZone` lands on. */
+function wallTimeToInstant(dateStr: string, timeStr: string, timeZone: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const [hh, mm] = timeStr.split(":").map(Number);
+  const naive = Date.UTC(y, m - 1, d, hh, mm);
+  // Offset is evaluated at roughly the right instant, which is what matters
+  // either side of a DST change.
+  return new Date(naive - zoneOffsetMs(new Date(naive), timeZone));
+}
+
+/** Today's date in `timeZone`, as YYYY-MM-DD. */
+function localToday(timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+async function sendBrowserPush(
+  userId: string,
+  taskTitle: string,
+  options: { title?: string; body?: string; tag?: string } = {}
+) {
   const { data: subscriptions } = await supabase
     .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth")
     .eq("user_id", userId);
 
   const payload = JSON.stringify({
-    title: "DoNext reminder",
-    body: taskTitle,
+    title: options.title ?? "DoNext reminder",
+    body: options.body ?? taskTitle,
     url: "/dashboard",
+    tag: options.tag,
   });
 
   let sent = 0;
@@ -167,10 +234,74 @@ async function sendEmail(
   return { ok: res.ok, debug: res.ok ? "sent" : `resend error ${res.status}: ${bodyText}` };
 }
 
+/**
+ * Desktop notifications straight off a task's due date — no reminder row, no
+ * setup. Fires when the due time arrives and nudges again every
+ * REPEAT_MINUTES until the task is completed, giving up REPEAT_WINDOW_HOURS
+ * after it came due so a task left open does not chime forever.
+ *
+ * Only the window keeps this sane: a task whose due date passed last week has
+ * no due_notified_at either, and without the window every one of them would
+ * fire the moment this shipped.
+ */
+async function notifyTasksComingDue(): Promise<{ notified: number }> {
+  const now = new Date();
+  const staleBefore = new Date(now.getTime() - REPEAT_MINUTES * 60_000).toISOString();
+
+  // Bounded by the furthest-ahead zone so no one's "today" is missed; each
+  // task is then judged against its own owner's clock below.
+  const { data: candidates } = await supabase
+    .from("tasks")
+    .select("id, user_id, title, due_date, due_time, due_notified_at")
+    .not("due_date", "is", null)
+    .neq("status", "completed")
+    .is("deleted_at", null)
+    .lte("due_date", localToday("Pacific/Kiritimati"))
+    .or(`due_notified_at.is.null,due_notified_at.lte.${staleBefore}`);
+
+  if (!candidates?.length) return { notified: 0 };
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, timezone")
+    .in("id", [...new Set(candidates.map((t) => t.user_id))]);
+  const zoneOf = new Map(profiles?.map((p) => [p.id, p.timezone || FALLBACK_TZ]) ?? []);
+
+  let notified = 0;
+  for (const task of candidates) {
+    const tz = zoneOf.get(task.user_id) ?? FALLBACK_TZ;
+    const dueAt = wallTimeToInstant(task.due_date!, task.due_time ?? DEFAULT_DUE_TIME, tz);
+    const sinceDue = now.getTime() - dueAt.getTime();
+    if (sinceDue < 0 || sinceDue > REPEAT_WINDOW_HOURS * 3_600_000) continue;
+
+    const repeat = task.due_notified_at !== null;
+    const sent = await sendBrowserPush(task.user_id, task.title, {
+      title: repeat ? `Still due: ${task.title}` : task.title,
+      body: task.due_time
+        ? `Due at ${formatDueTime(task.due_time)}`
+        : "Due today",
+      // Per task, so a repeat replaces its own toast rather than stacking, and
+      // two tasks due at once still get one each.
+      tag: `task-${task.id}`,
+    });
+    if (sent > 0) notified++;
+
+    // Stamped even when no device was reachable, so a machine that is off does
+    // not queue up a burst of nudges the moment it comes back.
+    await supabase
+      .from("tasks")
+      .update({ due_notified_at: now.toISOString() })
+      .eq("id", task.id);
+  }
+  return { notified };
+}
+
 Deno.serve(async (req) => {
   if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
+
+  const dueTaskResult = await notifyTasksComingDue();
 
   const now = new Date().toISOString();
 
@@ -228,7 +359,13 @@ Deno.serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({ processed: dueReminders?.length ?? 0, sent, failed, debugInfo }),
+    JSON.stringify({
+      processed: dueReminders?.length ?? 0,
+      sent,
+      failed,
+      dueTasksNotified: dueTaskResult.notified,
+      debugInfo,
+    }),
     { headers: { "Content-Type": "application/json" } }
   );
 });

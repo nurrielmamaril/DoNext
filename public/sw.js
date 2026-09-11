@@ -25,6 +25,14 @@ self.addEventListener("push", (event) => {
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
     data: { url: payload.url || "/dashboard" },
+    // Stay on screen until it is dealt with, rather than sliding away after a
+    // few seconds — a reminder you missed is a reminder that did not work.
+    requireInteraction: true,
+    // Tagged per task, so a repeat for the same task replaces its own toast
+    // (and still chimes) while two different tasks coming due together each
+    // get their own.
+    tag: payload.tag || "donext-reminder",
+    renotify: true,
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

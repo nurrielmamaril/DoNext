@@ -20,18 +20,21 @@ export interface Database {
           id: string;
           email: string;
           display_name: string | null;
+          timezone: string | null;
           created_at: string;
         };
         Insert: {
           id: string;
           email: string;
           display_name?: string | null;
+          timezone?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           email?: string;
           display_name?: string | null;
+          timezone?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -130,6 +133,7 @@ export interface Database {
           recurrence_parent_id: string | null;
           created_at: string;
           completed_at: string | null;
+          due_notified_at: string | null;
           deleted_at: string | null;
           updated_at: string;
         };
@@ -149,6 +153,7 @@ export interface Database {
           recurrence_parent_id?: string | null;
           created_at?: string;
           completed_at?: string | null;
+          due_notified_at?: string | null;
           deleted_at?: string | null;
           updated_at?: string;
         };
@@ -168,6 +173,7 @@ export interface Database {
           recurrence_parent_id?: string | null;
           created_at?: string;
           completed_at?: string | null;
+          due_notified_at?: string | null;
           deleted_at?: string | null;
           updated_at?: string;
         };
