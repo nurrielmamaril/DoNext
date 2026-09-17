@@ -10,6 +10,7 @@ import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import type { EditorView } from "@tiptap/pm/view";
 import { RichTextToolbar } from "@/components/shared/RichTextToolbar";
+import { LinkBubbleMenu } from "@/components/shared/LinkBubbleMenu";
 import { extractImageFromClipboard } from "@/lib/utils/clipboard";
 import { fragmentToHtml, fragmentToPlainText, isHtmlContent, plainTextToHtml } from "@/lib/utils/richtext";
 
@@ -86,6 +87,7 @@ export function RichTextEditor({ content, onChange, onImagePaste, placeholder }:
     <div className="min-w-0 rounded-md border">
       <RichTextToolbar editor={editor} />
       <EditorContent editor={editor} />
+      {editor && <LinkBubbleMenu editor={editor} />}
     </div>
   );
 }

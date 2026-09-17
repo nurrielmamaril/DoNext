@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { normalizeLinkHref } from "@/lib/utils/richtext";
 
 interface RichTextToolbarProps {
   editor: Editor | null;
@@ -85,7 +86,7 @@ function LinkPopover({ editor, isLink, linkHref, hasSelection }: LinkPopoverProp
   }
 
   function applyLink() {
-    const trimmed = url.trim();
+    const trimmed = normalizeLinkHref(url);
     if (!trimmed) return;
     const chain = editor.chain().focus();
     if (savedSelection.current) chain.setTextSelection(savedSelection.current);

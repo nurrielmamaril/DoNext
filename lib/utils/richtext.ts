@@ -116,3 +116,18 @@ export function fragmentToHtml(schema: Schema, fragment: Fragment): string {
   container.appendChild(domFragment);
   return container.innerHTML;
 }
+
+/**
+ * Turns what someone typed into a link address into one that actually goes
+ * somewhere. "example.com" on its own is a relative path — clicked, it would
+ * open a page inside DoNext — so a bare domain gets https:// put in front.
+ * Anything that already names a scheme (https:, mailto:, tel:) is left alone.
+ */
+export function normalizeLinkHref(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return "";
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith("//")) return `https:${trimmed}`;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return `mailto:${trimmed}`;
+  return `https://${trimmed}`;
+}
