@@ -67,6 +67,9 @@ export function SendEmailDialog({ open, onOpenChange, type, id, defaultSubject }
         });
         toast.success(`Scheduled for ${format(sendAt, "MMM d, yyyy 'at' h:mm a")}`);
         resetForm();
+        // Closes on success the same way an immediate send does — the job is
+        // done, and leaving the dialog up only invites scheduling it twice.
+        onOpenChange(false);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Couldn't schedule email");
       }
