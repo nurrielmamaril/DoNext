@@ -211,11 +211,14 @@ export function TaskList({
           is the scrolling element, so top-0 parks this at the top of the
           visible area; the solid background keeps rows from showing through
           as they pass underneath. */}
-      <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b bg-background px-4 pt-6 pb-3">
+      {/* On a phone the heading takes its own line and the controls below it
+          share the width evenly — left to wrap, they stagger into ragged rows
+          of different widths. From md up this is the row it always was. */}
+      <div className="sticky top-0 z-20 flex flex-col gap-2 border-b bg-background px-4 pt-6 pb-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
         {selectionMode ? (
           <>
             <span className="text-sm font-medium">{selectedTasks.length} selected</span>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 *:flex-1 md:*:flex-none">
               <Button size="sm" variant="outline" onClick={selectAll}>
                 Select all
               </Button>
@@ -251,18 +254,21 @@ export function TaskList({
         ) : (
           <>
             <h2 className="font-heading text-xl">{title}</h2>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
               {showStatusFilter && (
-                <div className="relative">
+                <div className="relative w-full md:w-auto">
                   <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={searchInput}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     placeholder="Search..."
-                    className="h-7 w-40 pl-7 md:text-[0.8rem]"
+                    className="h-9 w-full pl-7 md:h-7 md:w-40 md:text-[0.8rem]"
                   />
                 </div>
               )}
+              {/* md:contents dissolves this wrapper on desktop, so the row
+                  there is exactly the flat one it has always been. */}
+              <div className="flex gap-2 *:flex-1 md:contents">
               {showStatusFilter && (
                 <Select
                   items={{ active: "Active", completed: "Completed", all: "All" }}
@@ -272,7 +278,7 @@ export function TaskList({
                     setSelectedIds(new Set());
                   }}
                 >
-                  <SelectTrigger size="sm">
+                  <SelectTrigger size="sm" className="data-[size=sm]:h-9 md:data-[size=sm]:h-7">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -296,7 +302,7 @@ export function TaskList({
                   setSelectedIds(new Set());
                 }}
               >
-                <SelectTrigger size="sm">
+                <SelectTrigger size="sm" className="data-[size=sm]:h-9 md:data-[size=sm]:h-7">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -307,9 +313,15 @@ export function TaskList({
                   <SelectItem value="created_at">Date created</SelectItem>
                 </SelectContent>
               </Select>
-              <Button size="sm" variant="outline" onClick={() => setSelectionMode(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 md:h-7"
+                onClick={() => setSelectionMode(true)}
+              >
                 Select
               </Button>
+              </div>
             </div>
           </>
         )}

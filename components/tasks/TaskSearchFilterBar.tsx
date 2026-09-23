@@ -109,16 +109,20 @@ export function TaskSearchFilterBar({ filters, onFiltersChange }: TaskSearchFilt
 
   return (
     <div className="flex flex-col gap-2 px-4 pb-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[180px] flex-1">
+      <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+        <div className="relative w-full md:min-w-[180px] md:flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search tasks..."
-            className="pl-7"
+            className="h-9 pl-7 md:h-8"
           />
         </div>
+
+        {/* The filters share one row on a phone instead of wrapping into
+            ragged widths; md:contents restores the original flat row. */}
+        <div className="flex flex-wrap gap-2 *:h-9 *:flex-1 md:contents md:*:h-7 md:*:flex-none">
 
         {mounted ? (
           <Popover>
@@ -193,6 +197,7 @@ export function TaskSearchFilterBar({ filters, onFiltersChange }: TaskSearchFilt
             Clear all
           </Button>
         )}
+        </div>
       </div>
 
       {hasActiveFilters && (

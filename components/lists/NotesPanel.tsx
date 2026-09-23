@@ -93,11 +93,13 @@ export function NotesPanel({
 
   return (
     <div>
-      <div className="flex items-center justify-between px-4 pt-6 pb-3">
+      {/* Same shape as the task list header: stacked on a phone with the
+          controls sharing the width, the original row from md up. */}
+      <div className="flex flex-col gap-2 px-4 pt-6 pb-3 md:flex-row md:items-center md:justify-between">
         {selectionMode ? (
           <>
             <span className="text-sm font-medium">{selectedCount} selected</span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 *:flex-1 md:*:flex-none">
               <Button size="sm" variant="outline" onClick={selectAll}>
                 Select all
               </Button>
@@ -117,11 +119,16 @@ export function NotesPanel({
         ) : (
           <>
             <h2 className="font-heading text-xl">{title}</h2>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => setSelectionMode(true)}>
+            <div className="flex items-center gap-2 *:flex-1 md:*:flex-none">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 md:h-7"
+                onClick={() => setSelectionMode(true)}
+              >
                 Select
               </Button>
-              <Button size="sm" variant="outline" onClick={handleNewNote}>
+              <Button size="sm" variant="outline" className="h-9 md:h-7" onClick={handleNewNote}>
                 <Plus className="size-3.5" /> New note
               </Button>
             </div>
