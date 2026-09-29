@@ -17,7 +17,6 @@ import {
   CalendarClock,
   CheckCircle2,
   Eye,
-  EyeOff,
   ListTodo,
   Mail,
   NotebookPen,
@@ -32,10 +31,10 @@ import { Button } from "@/components/ui/button";
 import {
   getHiddenRaw,
   getServerHiddenRaw,
+  hideCategory,
   parseHidden,
-  setReveal,
+  showAllCategories,
   subscribeHidden,
-  toggleHiddenCategory,
 } from "@/lib/hiddenCategories";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -80,7 +79,6 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
   const hiddenRaw = useSyncExternalStore(subscribeHidden, getHiddenRaw, getServerHiddenRaw);
   const hiddenIds = useMemo(() => new Set(parseHidden(hiddenRaw)), [hiddenRaw]);
   const hiddenCount = (lists ?? []).filter((l) => hiddenIds.has(l.id)).length;
-  const [revealing, setRevealing] = useState(false);
 
   const [listDialogOpen, setListDialogOpen] = useState(false);
   const [editingList, setEditingList] = useState<{ id: string; name: string; color: string | null } | null>(null);
@@ -177,19 +175,15 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
                       variant="ghost"
                       size="icon-xs"
                       data-collapse-hide
-                      onClick={() => {
-                        const next = !revealing;
-                        setRevealing(next);
-                        setReveal(next);
-                      }}
-                      aria-label={revealing ? "Finish managing hidden clients" : `Show ${hiddenCount} hidden`}
+                      onClick={showAllCategories}
+                      aria-label={`Show ${hiddenCount} hidden client${hiddenCount === 1 ? "" : "s"}`}
                     />
                   }
                 >
-                  {revealing ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  <Eye className="size-3.5" />
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  {revealing ? "Hide them again" : `${hiddenCount} hidden — tap to manage`}
+                  Show {hiddenCount} hidden client{hiddenCount === 1 ? "" : "s"}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -218,8 +212,7 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
                     setListDialogOpen(true);
                   }}
                   onDelete={() => setDeletingList(list)}
-                  hidden={hiddenIds.has(list.id)}
-                  onToggleHidden={() => toggleHiddenCategory(list.id)}
+                  onHide={() => hideCategory(list.id)}
                   onNavigate={onNavigate}
                 />
               ))}

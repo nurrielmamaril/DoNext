@@ -23,10 +23,7 @@ function safeId(id: string) {
 export function hiddenCss(ids: string[]) {
   return ids
     .filter(safeId)
-    .map(
-      (id) =>
-        `html:not([data-categories-reveal="true"]) [data-list-id="${id}"]{display:none}`
-    )
+    .map((id) => `[data-list-id="${id}"]{display:none}`)
     .join("");
 }
 
@@ -79,9 +76,10 @@ export function parseHidden(raw: string): string[] {
   }
 }
 
-export function toggleHiddenCategory(id: string) {
+export function hideCategory(id: string) {
   const current = parseHidden(getHiddenRaw());
-  const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+  if (current.includes(id)) return;
+  const next = [...current, id];
   try {
     localStorage.setItem(KEY, JSON.stringify(next));
   } catch {
@@ -101,9 +99,3 @@ export function showAllCategories() {
   listeners.forEach((cb) => cb());
 }
 
-/** Reveal mode lets you see — and unhide — what is currently hidden. */
-export function setReveal(on: boolean) {
-  const root = document.documentElement;
-  if (on) root.setAttribute("data-categories-reveal", "true");
-  else root.removeAttribute("data-categories-reveal");
-}

@@ -96,7 +96,7 @@ export default function RootLayout({
           // in step with lib/hiddenCategories.ts, which writes the same rules.
           dangerouslySetInnerHTML={{
             __html:
-              "try{var h=JSON.parse(localStorage.getItem('hiddenCategories')||'[]');h=h.filter(function(i){return typeof i==='string'&&/^[A-Za-z0-9_-]+$/.test(i)});if(h.length){var s=document.createElement('style');s.id='hidden-categories';s.textContent=h.map(function(i){return 'html:not([data-categories-reveal=\"true\"]) [data-list-id=\"'+i+'\"]{display:none}'}).join('');document.head.appendChild(s);}}catch(e){}",
+              "try{var h=JSON.parse(localStorage.getItem('hiddenCategories')||'[]');h=h.filter(function(i){return typeof i==='string'&&/^[A-Za-z0-9_-]+$/.test(i)});if(h.length){var s=document.createElement('style');s.id='hidden-categories';s.textContent=h.map(function(i){return '[data-list-id=\"'+i+'\"]{display:none}'}).join('');document.head.appendChild(s);}}catch(e){}",
           }}
         />
       </head>

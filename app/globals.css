@@ -327,19 +327,10 @@ html[data-sidebar-collapsed="true"] .sidebar-aside .sidebar-footer-row {
   flex-direction: column;
 }
 
-/* Clients hidden for screen sharing. The rules that do the hiding are written
-   per client id into a <style> element — before first paint by the inline
-   script in app/layout.tsx, and afterwards by lib/hiddenCategories.ts — since
-   a name that renders before React hides it has already been seen.
-
-   Reveal mode lifts them all temporarily so you can pick which to bring back;
-   the ones that are only visible because of it are dimmed and marked. */
-html[data-categories-reveal="true"] [data-list-hidden="true"] {
-  opacity: 0.55;
-}
-html:not([data-categories-reveal="true"]) .reveal-only {
-  display: none;
-}
+/* Clients hidden for screen sharing are hidden by per-id rules written into a
+   <style> element — before first paint by the inline script in app/layout.tsx,
+   and afterwards by lib/hiddenCategories.ts — since a name that renders before
+   React hides it has already been seen. Nothing to declare here. */
 
 
 /* Climbing-vine motion. Two nested transforms share the same pivot (each
