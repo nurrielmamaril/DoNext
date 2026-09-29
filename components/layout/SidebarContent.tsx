@@ -206,11 +206,6 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
             </Button>
           </div>
         </div>
-        {revealing && (
-          <p data-collapse-hide className="px-2 pb-1 text-[11px] text-muted-foreground">
-            Dimmed clients are hidden. Use their ⋯ menu to bring one back.
-          </p>
-        )}
         <div data-categories-list className="flex-1 overflow-y-auto">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={lists?.map((l) => l.id) ?? []} strategy={verticalListSortingStrategy}>

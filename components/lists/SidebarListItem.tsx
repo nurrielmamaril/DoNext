@@ -90,11 +90,11 @@ export function SidebarListItem({ list, onRename, onDelete, hidden, onToggleHidd
           <DropdownMenuItem onClick={onToggleHidden}>
             {hidden ? (
               <>
-                <Eye className="size-3.5" /> Show in sidebar
+                <Eye className="size-3.5" /> Show
               </>
             ) : (
               <>
-                <EyeOff className="size-3.5" /> Hide while screen sharing
+                <EyeOff className="size-3.5" /> Hide
               </>
             )}
           </DropdownMenuItem>
