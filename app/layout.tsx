@@ -89,6 +89,15 @@ export default function RootLayout({
               "try{var c=localStorage.getItem('sidebarCollapsed');if(c)document.documentElement.setAttribute('data-sidebar-collapsed',c);var w=localStorage.getItem('sidebarWidth');if(w)document.documentElement.style.setProperty('--sidebar-width',w+'px');}catch(e){}",
           }}
         />
+        <script
+          // Client names stay hidden from the very first frame. Anything that
+          // waited for React would flash the list before hiding it, which for
+          // a screen-sharing guard is the whole failure.
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(localStorage.getItem('categoriesHidden')==='true')document.documentElement.setAttribute('data-categories-hidden','true');}catch(e){}",
+          }}
+        />
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>

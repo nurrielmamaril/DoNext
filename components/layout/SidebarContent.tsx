@@ -16,6 +16,8 @@ import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-ki
 import {
   CalendarClock,
   CheckCircle2,
+  Eye,
+  EyeOff,
   ListTodo,
   Mail,
   NotebookPen,
@@ -70,6 +72,24 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
   const [deletingList, setDeletingList] = useState<{ id: string; name: string } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  /**
+   * Hides every client name in the sidebar, for sharing your screen with one
+   * client while the others are none of their business. Kept on the document
+   * and in localStorage rather than in React state, so it survives a reload
+   * and is already applied on the first frame — see app/globals.css.
+   */
+  function toggleCategoriesHidden() {
+    const root = document.documentElement;
+    const next = root.getAttribute("data-categories-hidden") !== "true";
+    if (next) root.setAttribute("data-categories-hidden", "true");
+    else root.removeAttribute("data-categories-hidden");
+    try {
+      localStorage.setItem("categoriesHidden", String(next));
+    } catch {
+      // Private mode or blocked storage: the toggle still works for this visit.
+    }
+  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -151,19 +171,46 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
           <span data-collapse-hide className="text-xs font-medium text-muted-foreground">
             Categories
           </span>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => {
-              setEditingList(null);
-              setListDialogOpen(true);
-            }}
-            aria-label="New category"
-          >
-            <Plus className="size-3.5" />
-          </Button>
+          <div className="flex items-center">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={toggleCategoriesHidden}
+                    aria-label="Hide or show client names"
+                  />
+                }
+              >
+                <EyeOff className="cat-when-shown size-3.5" />
+                <Eye className="cat-when-hidden size-3.5" />
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Hide client names for screen sharing</TooltipContent>
+            </Tooltip>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => {
+                setEditingList(null);
+                setListDialogOpen(true);
+              }}
+              aria-label="New category"
+            >
+              <Plus className="size-3.5" />
+            </Button>
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <button
+          type="button"
+          data-categories-note
+          data-collapse-hide
+          onClick={toggleCategoriesHidden}
+          className="mx-2 rounded-md border border-dashed px-2 py-2 text-left text-xs text-muted-foreground hover:bg-accent/50"
+        >
+          Client names hidden. Tap to show.
+        </button>
+        <div data-categories-list className="flex-1 overflow-y-auto">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={lists?.map((l) => l.id) ?? []} strategy={verticalListSortingStrategy}>
               {lists?.map((list) => (

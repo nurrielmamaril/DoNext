@@ -327,6 +327,19 @@ html[data-sidebar-collapsed="true"] .sidebar-aside .sidebar-footer-row {
   flex-direction: column;
 }
 
+/* Client names hidden for screen sharing. Driven by an attribute set before
+   first paint (see app/layout.tsx) rather than React state, because a single
+   frame of the real list showing is exactly what this is meant to prevent.
+   The same reason the icons swap in CSS: React would hydrate a beat late. */
+html[data-categories-hidden="true"] [data-categories-list],
+html[data-categories-hidden="true"] .cat-when-shown {
+  display: none;
+}
+html:not([data-categories-hidden="true"]) [data-categories-note],
+html:not([data-categories-hidden="true"]) .cat-when-hidden {
+  display: none;
+}
+
 
 /* Climbing-vine motion. Two nested transforms share the same pivot (each
    vine's base, set inline): a wide slow sway that also drifts sideways, plus
