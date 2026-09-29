@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Eye, EyeOff, GripVertical, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,11 +19,14 @@ interface SidebarListItemProps {
   list: { id: string; name: string; logo_url: string | null };
   onRename: () => void;
   onDelete: () => void;
+  /** Kept out of the sidebar while screen sharing. */
+  hidden: boolean;
+  onToggleHidden: () => void;
   /** Mobile only — reports the tapped href so the drawer can time its close. */
   onNavigate?: (href: string) => void;
 }
 
-export function SidebarListItem({ list, onRename, onDelete, onNavigate }: SidebarListItemProps) {
+export function SidebarListItem({ list, onRename, onDelete, hidden, onToggleHidden, onNavigate }: SidebarListItemProps) {
   const pathname = usePathname();
   const isActive = pathname === `/lists/${list.id}`;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -39,6 +42,9 @@ export function SidebarListItem({ list, onRename, onDelete, onNavigate }: Sideba
     <div
       ref={setNodeRef}
       style={style}
+      // The id is what the pre-paint stylesheet targets to hide this row.
+      data-list-id={list.id}
+      data-list-hidden={hidden ? "true" : undefined}
       className={cn(
         "group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm",
         isActive ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
@@ -80,6 +86,17 @@ export function SidebarListItem({ list, onRename, onDelete, onNavigate }: Sideba
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={onRename}>
             <Pencil className="size-3.5" /> Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onToggleHidden}>
+            {hidden ? (
+              <>
+                <Eye className="size-3.5" /> Show in sidebar
+              </>
+            ) : (
+              <>
+                <EyeOff className="size-3.5" /> Hide while screen sharing
+              </>
+            )}
           </DropdownMenuItem>
           <DropdownMenuItem variant="destructive" onClick={onDelete}>
             <Trash2 className="size-3.5" /> Delete

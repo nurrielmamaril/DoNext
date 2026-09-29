@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -29,6 +29,14 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  getHiddenRaw,
+  getServerHiddenRaw,
+  parseHidden,
+  setReveal,
+  subscribeHidden,
+  toggleHiddenCategory,
+} from "@/lib/hiddenCategories";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -67,29 +75,18 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
   const deleteList = useDeleteList();
   const reorderLists = useReorderLists();
 
+  // Read straight from the store rather than mirrored into state, so the set
+  // stays the single source of truth for both the CSS and these menus.
+  const hiddenRaw = useSyncExternalStore(subscribeHidden, getHiddenRaw, getServerHiddenRaw);
+  const hiddenIds = useMemo(() => new Set(parseHidden(hiddenRaw)), [hiddenRaw]);
+  const hiddenCount = (lists ?? []).filter((l) => hiddenIds.has(l.id)).length;
+  const [revealing, setRevealing] = useState(false);
+
   const [listDialogOpen, setListDialogOpen] = useState(false);
   const [editingList, setEditingList] = useState<{ id: string; name: string; color: string | null } | null>(null);
   const [deletingList, setDeletingList] = useState<{ id: string; name: string } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
-
-  /**
-   * Hides every client name in the sidebar, for sharing your screen with one
-   * client while the others are none of their business. Kept on the document
-   * and in localStorage rather than in React state, so it survives a reload
-   * and is already applied on the first frame — see app/globals.css.
-   */
-  function toggleCategoriesHidden() {
-    const root = document.documentElement;
-    const next = root.getAttribute("data-categories-hidden") !== "true";
-    if (next) root.setAttribute("data-categories-hidden", "true");
-    else root.removeAttribute("data-categories-hidden");
-    try {
-      localStorage.setItem("categoriesHidden", String(next));
-    } catch {
-      // Private mode or blocked storage: the toggle still works for this visit.
-    }
-  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -172,22 +169,30 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
             Categories
           </span>
           <div className="flex items-center">
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={toggleCategoriesHidden}
-                    aria-label="Hide or show client names"
-                  />
-                }
-              >
-                <EyeOff className="cat-when-shown size-3.5" />
-                <Eye className="cat-when-hidden size-3.5" />
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Hide client names for screen sharing</TooltipContent>
-            </Tooltip>
+            {hiddenCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      data-collapse-hide
+                      onClick={() => {
+                        const next = !revealing;
+                        setRevealing(next);
+                        setReveal(next);
+                      }}
+                      aria-label={revealing ? "Finish managing hidden clients" : `Show ${hiddenCount} hidden`}
+                    />
+                  }
+                >
+                  {revealing ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {revealing ? "Hide them again" : `${hiddenCount} hidden — tap to manage`}
+                </TooltipContent>
+              </Tooltip>
+            )}
             <Button
               variant="ghost"
               size="icon-xs"
@@ -201,15 +206,11 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
             </Button>
           </div>
         </div>
-        <button
-          type="button"
-          data-categories-note
-          data-collapse-hide
-          onClick={toggleCategoriesHidden}
-          className="mx-2 rounded-md border border-dashed px-2 py-2 text-left text-xs text-muted-foreground hover:bg-accent/50"
-        >
-          Client names hidden. Tap to show.
-        </button>
+        {revealing && (
+          <p data-collapse-hide className="px-2 pb-1 text-[11px] text-muted-foreground">
+            Dimmed clients are hidden. Use their ⋯ menu to bring one back.
+          </p>
+        )}
         <div data-categories-list className="flex-1 overflow-y-auto">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={lists?.map((l) => l.id) ?? []} strategy={verticalListSortingStrategy}>
@@ -222,6 +223,8 @@ export function SidebarContent({ userEmail, onToggleCollapsed, onNavigate }: Sid
                     setListDialogOpen(true);
                   }}
                   onDelete={() => setDeletingList(list)}
+                  hidden={hiddenIds.has(list.id)}
+                  onToggleHidden={() => toggleHiddenCategory(list.id)}
                   onNavigate={onNavigate}
                 />
               ))}

@@ -327,16 +327,17 @@ html[data-sidebar-collapsed="true"] .sidebar-aside .sidebar-footer-row {
   flex-direction: column;
 }
 
-/* Client names hidden for screen sharing. Driven by an attribute set before
-   first paint (see app/layout.tsx) rather than React state, because a single
-   frame of the real list showing is exactly what this is meant to prevent.
-   The same reason the icons swap in CSS: React would hydrate a beat late. */
-html[data-categories-hidden="true"] [data-categories-list],
-html[data-categories-hidden="true"] .cat-when-shown {
-  display: none;
+/* Clients hidden for screen sharing. The rules that do the hiding are written
+   per client id into a <style> element — before first paint by the inline
+   script in app/layout.tsx, and afterwards by lib/hiddenCategories.ts — since
+   a name that renders before React hides it has already been seen.
+
+   Reveal mode lifts them all temporarily so you can pick which to bring back;
+   the ones that are only visible because of it are dimmed and marked. */
+html[data-categories-reveal="true"] [data-list-hidden="true"] {
+  opacity: 0.55;
 }
-html:not([data-categories-hidden="true"]) [data-categories-note],
-html:not([data-categories-hidden="true"]) .cat-when-hidden {
+html:not([data-categories-reveal="true"]) .reveal-only {
   display: none;
 }
 

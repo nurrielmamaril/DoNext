@@ -90,12 +90,13 @@ export default function RootLayout({
           }}
         />
         <script
-          // Client names stay hidden from the very first frame. Anything that
-          // waited for React would flash the list before hiding it, which for
-          // a screen-sharing guard is the whole failure.
+          // Individually hidden clients stay hidden from the very first frame.
+          // Anything that waited for React would flash the names before hiding
+          // them, which for a screen-sharing guard is the whole failure. Kept
+          // in step with lib/hiddenCategories.ts, which writes the same rules.
           dangerouslySetInnerHTML={{
             __html:
-              "try{if(localStorage.getItem('categoriesHidden')==='true')document.documentElement.setAttribute('data-categories-hidden','true');}catch(e){}",
+              "try{var h=JSON.parse(localStorage.getItem('hiddenCategories')||'[]');h=h.filter(function(i){return typeof i==='string'&&/^[A-Za-z0-9_-]+$/.test(i)});if(h.length){var s=document.createElement('style');s.id='hidden-categories';s.textContent=h.map(function(i){return 'html:not([data-categories-reveal=\"true\"]) [data-list-id=\"'+i+'\"]{display:none}'}).join('');document.head.appendChild(s);}}catch(e){}",
           }}
         />
       </head>
