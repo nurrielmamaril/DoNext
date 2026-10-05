@@ -42,7 +42,7 @@ export function ListDetailView({ listId, listName, logoUrl }: ListDetailViewProp
         emptyMessage={`Nothing repeats in ${listName} yet. Set a task to repeat and it will show up here.`}
         showListBadge={false}
         defaultListId={listId}
-        allowQuickAdd={false}
+        newTask={{ recurring: true }}
         allowReorder={false}
         fullWidth
       />
@@ -53,6 +53,7 @@ export function ListDetailView({ listId, listName, logoUrl }: ListDetailViewProp
         emptyMessage={`No one-off tasks in ${listName} yet.`}
         showListBadge={false}
         defaultListId={listId}
+        newTask={{ recurring: false }}
         fullWidth
       />
 

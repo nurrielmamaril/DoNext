@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ClipboardList, Search } from "lucide-react";
+import { ClipboardList, Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -35,7 +35,7 @@ import {
   type StatusFilter,
 } from "@/lib/hooks/useTasks";
 import type { Database } from "@/lib/types/database.types";
-import type { RecurrenceRule } from "@/lib/utils/recurrence";
+import { recurrencePresets, type RecurrenceRule } from "@/lib/utils/recurrence";
 
 type TaskRow = Database["public"]["Tables"]["tasks"]["Row"] & {
   lists?: { id: string; name: string; color: string | null } | null;
@@ -82,6 +82,27 @@ interface TaskListProps {
    * twice and unsettle "Default order" everywhere else those tasks appear.
    */
   allowReorder?: boolean;
+  /**
+   * Replaces the one-line quick add with a "New task" button that opens the
+   * task editor, with the repeat field already set to match the list it was
+   * added from — a task filed under "Recurring Tasks" has to arrive
+   * repeating, which a single line can't express.
+   */
+  newTask?: { recurring: boolean };
+}
+
+// Starting point for a task created from this list's own button. The weekly
+// preset is only a default; the dialog's Repeat field is right there.
+function seedTask(recurring: boolean): EditableTask {
+  return {
+    title: "",
+    priority: "low",
+    status: "not_started",
+    due_date: null,
+    due_time: null,
+    description: "",
+    recurrence_rule: recurring ? recurrencePresets[1].rule : null,
+  };
 }
 
 export function TaskList({
@@ -93,6 +114,7 @@ export function TaskList({
   defaultListId = null,
   fullWidth = false,
   allowReorder = true,
+  newTask,
 }: TaskListProps) {
   const [sortKey, setSortKey] = useState<SortKey>("position");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
@@ -201,6 +223,11 @@ export function TaskList({
       is_recurring: task.is_recurring,
       recurrence_rule: task.recurrence_rule as unknown as RecurrenceRule | null,
     });
+    setDialogOpen(true);
+  }
+
+  function openNew() {
+    setEditingTask(seedTask(newTask?.recurring ?? false));
     setDialogOpen(true);
   }
 
@@ -321,6 +348,11 @@ export function TaskList({
               >
                 Select
               </Button>
+              {newTask && (
+                <Button size="sm" variant="outline" className="h-9 md:h-7" onClick={openNew}>
+                  <Plus className="size-3.5" /> New task
+                </Button>
+              )}
               </div>
             </div>
           </>
@@ -328,7 +360,7 @@ export function TaskList({
       </div>
 
       <div className="rounded-lg border bg-card">
-        {allowQuickAdd && <QuickAddTask defaultListId={defaultListId} />}
+        {allowQuickAdd && !newTask && <QuickAddTask defaultListId={defaultListId} />}
         {isLoading && (
           <p className="px-4 py-6 text-sm text-muted-foreground">Loading tasks...</p>
         )}
