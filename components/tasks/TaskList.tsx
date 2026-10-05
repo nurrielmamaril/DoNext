@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ClipboardList, Plus, Search } from "lucide-react";
+import { ArrowUpDown, ClipboardList, ListChecks, ListFilter, Plus, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -89,6 +90,12 @@ interface TaskListProps {
    * repeating, which a single line can't express.
    */
   newTask?: { recurring: boolean };
+  /**
+   * Set to filter on a term from outside and drop this list's own search box.
+   * The client page runs one search across both of its lists rather than
+   * repeating the field above each.
+   */
+  search?: string;
 }
 
 // Starting point for a task created from this list's own button. The weekly
@@ -115,11 +122,12 @@ export function TaskList({
   fullWidth = false,
   allowReorder = true,
   newTask,
+  search: externalSearch,
 }: TaskListProps) {
   const [sortKey, setSortKey] = useState<SortKey>("position");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const [ownSearch, setOwnSearch] = useState("");
   const [editingTask, setEditingTask] = useState<EditableTask | null | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -136,10 +144,12 @@ export function TaskList({
     setSearchInput(value);
     setSelectedIds(new Set());
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setSearch(value), 300);
+    debounceRef.current = setTimeout(() => setOwnSearch(value), 300);
   }
 
   const showStatusFilter = Boolean(filter.listId);
+  const showSearch = showStatusFilter && externalSearch === undefined;
+  const search = externalSearch ?? ownSearch;
   const effectiveFilter = showStatusFilter ? { ...filter, statusFilter, search } : filter;
   const { data: tasks, isLoading } = useTasksQuery(effectiveFilter);
 
@@ -282,7 +292,7 @@ export function TaskList({
           <>
             <h2 className="font-heading text-xl">{title}</h2>
             <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
-              {showStatusFilter && (
+              {showSearch && (
                 <div className="relative w-full md:w-auto">
                   <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -293,66 +303,85 @@ export function TaskList({
                   />
                 </div>
               )}
-              {/* md:contents dissolves this wrapper on desktop, so the row
-                  there is exactly the flat one it has always been. */}
-              <div className="flex gap-2 *:flex-1 md:contents">
-              {showStatusFilter && (
-                <Select
-                  items={{ active: "Active", completed: "Completed", all: "All" }}
-                  value={statusFilter}
-                  onValueChange={(v) => {
-                    setStatusFilter(v as StatusFilter);
-                    setSelectedIds(new Set());
-                  }}
+              {/* The two filters are one decision about what the list shows,
+                  so they sit in a single segmented control rather than as two
+                  more boxes competing with the buttons next to them. Each
+                  md:contents dissolves a phone-only row on desktop, where it
+                  all flattens back into one line. */}
+              <div className="flex gap-2 md:contents">
+                <div className="flex flex-1 *:flex-1 md:flex-none md:*:flex-none">
+                  {showStatusFilter && (
+                    <Select
+                      items={{ active: "Active", completed: "Completed", all: "All" }}
+                      value={statusFilter}
+                      onValueChange={(v) => {
+                        setStatusFilter(v as StatusFilter);
+                        setSelectedIds(new Set());
+                      }}
+                    >
+                      <SelectTrigger
+                        size="sm"
+                        className="rounded-r-none data-[size=sm]:h-9 md:data-[size=sm]:h-7"
+                      >
+                        <ListFilter className="size-3.5 text-muted-foreground" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="all">All</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <Select
+                    items={{
+                      position: "Default order",
+                      due_date: "Due date",
+                      priority: "Priority",
+                      status: "Status",
+                      created_at: "Date created",
+                    }}
+                    value={sortKey}
+                    onValueChange={(v) => {
+                      setSortKey(v as SortKey);
+                      setSelectedIds(new Set());
+                    }}
+                  >
+                    <SelectTrigger
+                      size="sm"
+                      className={cn(
+                        "data-[size=sm]:h-9 md:data-[size=sm]:h-7",
+                        // Shares the divider with the status filter beside it.
+                        showStatusFilter && "-ml-px rounded-l-none"
+                      )}
+                    >
+                      <ArrowUpDown className="size-3.5 text-muted-foreground" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="position">Default order</SelectItem>
+                      <SelectItem value="due_date">Due date</SelectItem>
+                      <SelectItem value="priority">Priority</SelectItem>
+                      <SelectItem value="status">Status</SelectItem>
+                      <SelectItem value="created_at">Date created</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex gap-2 *:flex-1 md:contents md:*:flex-none">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 md:h-7"
+                  onClick={() => setSelectionMode(true)}
                 >
-                  <SelectTrigger size="sm" className="data-[size=sm]:h-9 md:data-[size=sm]:h-7">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="all">All</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              <Select
-                items={{
-                  position: "Default order",
-                  due_date: "Due date",
-                  priority: "Priority",
-                  status: "Status",
-                  created_at: "Date created",
-                }}
-                value={sortKey}
-                onValueChange={(v) => {
-                  setSortKey(v as SortKey);
-                  setSelectedIds(new Set());
-                }}
-              >
-                <SelectTrigger size="sm" className="data-[size=sm]:h-9 md:data-[size=sm]:h-7">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="position">Default order</SelectItem>
-                  <SelectItem value="due_date">Due date</SelectItem>
-                  <SelectItem value="priority">Priority</SelectItem>
-                  <SelectItem value="status">Status</SelectItem>
-                  <SelectItem value="created_at">Date created</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-9 md:h-7"
-                onClick={() => setSelectionMode(true)}
-              >
-                Select
-              </Button>
-              {newTask && (
-                <Button size="sm" variant="outline" className="h-9 md:h-7" onClick={openNew}>
-                  <Plus className="size-3.5" /> New task
+                  <ListChecks className="size-3.5" /> Select
                 </Button>
-              )}
+                {newTask && (
+                  <Button size="sm" className="h-9 md:h-7" onClick={openNew}>
+                    <Plus className="size-3.5" /> New task
+                  </Button>
+                )}
               </div>
             </div>
           </>

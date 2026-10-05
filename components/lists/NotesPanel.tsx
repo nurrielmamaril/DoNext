@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { NotebookPen, Plus } from "lucide-react";
+import { ListChecks, NotebookPen, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -115,6 +115,8 @@ export function NotesPanel({
         ) : (
           <>
             <h2 className="font-heading text-xl">{title}</h2>
+            {/* Same hierarchy as the task lists above: the filters and Select
+                stay quiet, the one that adds something is the solid button. */}
             <div className="flex items-center gap-2 *:flex-1 md:*:flex-none">
               <Button
                 size="sm"
@@ -122,9 +124,9 @@ export function NotesPanel({
                 className="h-9 md:h-7"
                 onClick={() => setSelectionMode(true)}
               >
-                Select
+                <ListChecks className="size-3.5" /> Select
               </Button>
-              <Button size="sm" variant="outline" className="h-9 md:h-7" onClick={handleNewNote}>
+              <Button size="sm" className="h-9 md:h-7" onClick={handleNewNote}>
                 <Plus className="size-3.5" /> New note
               </Button>
             </div>
