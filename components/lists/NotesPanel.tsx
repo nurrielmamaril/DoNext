@@ -15,12 +15,8 @@ import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-ki
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { NoteCard } from "@/components/lists/NoteCard";
-import {
-  useCreateNote,
-  useNotesQuery,
-  useReorderNotes,
-  useBulkDeleteNotes,
-} from "@/lib/hooks/useNotes";
+import { NoteComposerDialog } from "@/components/lists/NoteComposerDialog";
+import { useNotesQuery, useReorderNotes, useBulkDeleteNotes } from "@/lib/hooks/useNotes";
 
 interface NotesPanelProps {
   listId: string | null;
@@ -34,12 +30,15 @@ export function NotesPanel({
   emptyMessage = "No notes yet. Add one to jot down anything about this client.",
 }: NotesPanelProps) {
   const { data: notes, isLoading } = useNotesQuery(listId);
-  const createNote = useCreateNote(listId);
   const reorderNotes = useReorderNotes(listId);
   const bulkDeleteNotes = useBulkDeleteNotes(listId);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  // Remounts the composer on every opening so a new note always starts from a
+  // blank editor rather than the last draft.
+  const [composerKey, setComposerKey] = useState(0);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -48,12 +47,9 @@ export function NotesPanel({
     [notes, selectedIds]
   );
 
-  async function handleNewNote() {
-    try {
-      await createNote.mutateAsync(notes?.length ?? 0);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't create note");
-    }
+  function handleNewNote() {
+    setComposerKey((k) => k + 1);
+    setComposerOpen(true);
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -161,6 +157,14 @@ export function NotesPanel({
           </div>
         </SortableContext>
       </DndContext>
+
+      <NoteComposerDialog
+        key={composerKey}
+        open={composerOpen}
+        onOpenChange={setComposerOpen}
+        listId={listId}
+        position={notes?.length ?? 0}
+      />
 
       <ConfirmDialog
         open={bulkDeleteConfirmOpen}

@@ -32,7 +32,20 @@ export function useCreateNote(listId: string | null) {
   const supabase = createClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (position: number) => {
+    // Takes the finished note rather than creating a blank one to edit in
+    // place: the composer holds it until it is saved, so nothing half-written
+    // ever reaches the list.
+    mutationFn: async ({
+      position,
+      title = null,
+      content = "",
+      color = null,
+    }: {
+      position: number;
+      title?: string | null;
+      content?: string;
+      color?: string | null;
+    }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not signed in");
       const { data, error } = await supabase
@@ -40,8 +53,9 @@ export function useCreateNote(listId: string | null) {
         .insert({
           list_id: listId,
           user_id: userData.user.id,
-          title: null,
-          content: "",
+          title,
+          content,
+          color,
           position,
         })
         .select()
