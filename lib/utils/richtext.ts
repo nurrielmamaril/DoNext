@@ -64,7 +64,13 @@ function listToPlainText(listNode: PMNode, indent: string): string {
   let n = ordered ? ((listNode.attrs.start as number | undefined) ?? 1) : 0;
   const lines: string[] = [];
   listNode.content.forEach((itemNode) => {
-    const marker = ordered ? `${n++}. ` : "- ";
+    // A literal bullet, not "- ". Chat apps treat a dash at the start of a
+    // line as markdown and rebuild the list their own way, indenting it and
+    // padding it with blank lines — what gets pasted then no longer matches
+    // the note it was copied from. A bullet character is just a character.
+    // A number does the same thing to them, so its space is a non-breaking
+    // one: it looks identical and reads as ordinary text.
+    const marker = ordered ? `${n++}. ` : "• ";
     const itemLines = itemContentToPlainText(itemNode.content, indent + "  ").split("\n");
     lines.push(indent + marker + itemLines[0]);
     for (let i = 1; i < itemLines.length; i++) lines.push(itemLines[i]);
@@ -73,7 +79,12 @@ function listToPlainText(listNode: PMNode, indent: string): string {
 }
 
 function blocksToPlainText(fragment: Fragment): string {
-  const parts: string[] = [];
+  // Blocks are separated by a blank line, which is what the gap between
+  // paragraphs in the editor looks like once it is plain text. A list is the
+  // exception: it belongs to the line that introduces it and sits straight
+  // underneath it, the way it does on screen.
+  const parts: { text: string; tight?: boolean }[] = [];
+  const push = (text: string, tight?: boolean) => parts.push({ text, tight });
   fragment.forEach((node) => {
     switch (node.type.name) {
       case "paragraph":
@@ -83,15 +94,15 @@ function blocksToPlainText(fragment: Fragment): string {
         // an extra blank-line gap on top of the separator already added
         // below, which would triple the visual gap instead of doubling it.
         const text = inlineToPlainText(node.content);
-        if (text.trim()) parts.push(text);
+        if (text.trim()) push(text);
         break;
       }
       case "bulletList":
       case "orderedList":
-        parts.push(listToPlainText(node, ""));
+        push(listToPlainText(node, ""), true);
         break;
       case "blockquote":
-        parts.push(
+        push(
           blocksToPlainText(node.content)
             .split("\n")
             .map((line) => `> ${line}`)
@@ -99,10 +110,13 @@ function blocksToPlainText(fragment: Fragment): string {
         );
         break;
       default:
-        if (node.content.size > 0) parts.push(blocksToPlainText(node.content));
+        if (node.content.size > 0) push(blocksToPlainText(node.content));
     }
   });
-  return parts.join("\n\n");
+  return parts.reduce(
+    (out, part, i) => (i === 0 ? part.text : out + (part.tight ? "\n" : "\n\n") + part.text),
+    ""
+  );
 }
 
 export function fragmentToPlainText(fragment: Fragment): string {
