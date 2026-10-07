@@ -79,30 +79,22 @@ function listToPlainText(listNode: PMNode, indent: string): string {
 }
 
 function blocksToPlainText(fragment: Fragment): string {
-  // Blocks are separated by a blank line, which is what the gap between
-  // paragraphs in the editor looks like once it is plain text. A list is the
-  // exception: it belongs to the line that introduces it and sits straight
-  // underneath it, the way it does on screen.
-  const parts: { text: string; tight?: boolean }[] = [];
-  const push = (text: string, tight?: boolean) => parts.push({ text, tight });
+  // One block, one line — the same shape the note has on screen. Blank lines
+  // come only from the empty paragraphs someone actually typed, so pasting a
+  // note somewhere plain gives back the note, not a spaced-out version of it.
+  const parts: string[] = [];
   fragment.forEach((node) => {
     switch (node.type.name) {
       case "paragraph":
-      case "heading": {
-        // Empty paragraphs are usually just spacer lines a user added by
-        // pressing Enter between sections — skip them so they don't stack
-        // an extra blank-line gap on top of the separator already added
-        // below, which would triple the visual gap instead of doubling it.
-        const text = inlineToPlainText(node.content);
-        if (text.trim()) push(text);
+      case "heading":
+        parts.push(inlineToPlainText(node.content));
         break;
-      }
       case "bulletList":
       case "orderedList":
-        push(listToPlainText(node, ""), true);
+        parts.push(listToPlainText(node, ""));
         break;
       case "blockquote":
-        push(
+        parts.push(
           blocksToPlainText(node.content)
             .split("\n")
             .map((line) => `> ${line}`)
@@ -110,13 +102,10 @@ function blocksToPlainText(fragment: Fragment): string {
         );
         break;
       default:
-        if (node.content.size > 0) push(blocksToPlainText(node.content));
+        if (node.content.size > 0) parts.push(blocksToPlainText(node.content));
     }
   });
-  return parts.reduce(
-    (out, part, i) => (i === 0 ? part.text : out + (part.tight ? "\n" : "\n\n") + part.text),
-    ""
-  );
+  return parts.join("\n");
 }
 
 export function fragmentToPlainText(fragment: Fragment): string {
