@@ -19,22 +19,45 @@ export function plainTextToHtml(content: string): string {
     .join("");
 }
 
+/**
+ * Wraps `text` in `marker`, keeping any space at either end outside the
+ * markers. Chat apps only treat a pair as formatting when it closes on a real
+ * character, so "*Name: *" arrives as a literal asterisk instead of bold —
+ * which is what a label typed with the space inside the bold produces.
+ */
+function wrap(text: string, marker: string): string {
+  const [, lead, core, trail] = /^(\s*)([\s\S]*?)(\s*)$/.exec(text) as RegExpExecArray;
+  if (!core) return text;
+  return `${lead}${marker}${core}${marker}${trail}`;
+}
+
 function inlineToPlainText(fragment: Fragment): string {
-  let out = "";
+  // Runs that carry the same marks are merged first: emphasis split across
+  // two text nodes would otherwise close and reopen mid-phrase ("*a**b*"),
+  // which reads as literal asterisks on the other end.
+  const runs: { text: string; bold: boolean; italic: boolean }[] = [];
   fragment.forEach((node) => {
     if (node.type.name === "hardBreak") {
-      out += "\n";
+      runs.push({ text: "\n", bold: false, italic: false });
       return;
     }
-    let text = node.text ?? "";
+    const text = node.text ?? "";
     if (!text) return;
-    const isBold = node.marks.some((m) => m.type.name === "bold");
-    const isItalic = node.marks.some((m) => m.type.name === "italic");
-    if (isBold) text = `*${text}*`;
-    if (isItalic) text = `_${text}_`;
-    out += text;
+    const bold = node.marks.some((m) => m.type.name === "bold");
+    const italic = node.marks.some((m) => m.type.name === "italic");
+    const last = runs[runs.length - 1];
+    if (last && last.bold === bold && last.italic === italic) last.text += text;
+    else runs.push({ text, bold, italic });
   });
-  return out;
+
+  return runs
+    .map(({ text, bold, italic }) => {
+      let out = text;
+      if (bold) out = wrap(out, "*");
+      if (italic) out = wrap(out, "_");
+      return out;
+    })
+    .join("");
 }
 
 // Returns the item's own content as unindented lines, except for any nested
