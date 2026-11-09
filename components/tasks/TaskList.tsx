@@ -327,12 +327,14 @@ export function TaskList({
                   They stay on one line down to a narrow window — the app is
                   often kept in a column beside other work, where a second row
                   of controls above every list costs more than it is worth.
-                  The sort filter takes whatever is left of the row. Only
-                  under 420px, which no longer fits them however they are
-                  arranged, does this wrap back to two rows. md:contents
-                  dissolves the wrapper on desktop, one flat row anyway. */}
+                  The buttons keep their own width and the two filters split
+                  whatever is left of the row between them, so it fills edge
+                  to edge with no gap opening up in the middle. Only under
+                  420px, which no longer fits them however they are arranged,
+                  does this wrap back to two rows. md:contents dissolves the
+                  wrapper on desktop, one flat row anyway. */}
               <div className="flex min-w-0 flex-wrap gap-2 md:contents">
-                <div className="flex min-w-0 flex-1 basis-full min-[420px]:flex-none min-[420px]:basis-auto">
+                <div className="flex min-w-0 grow-[2] basis-full min-[420px]:basis-auto md:grow-0 md:basis-auto">
                   {showStatusFilter && (
                     <Select
                       items={{ active: "Active", completed: "Completed", all: "All" }}
@@ -367,7 +369,7 @@ export function TaskList({
                     <SelectTrigger
                       size="sm"
                       className={cn(
-                        "min-w-0 shrink data-[size=sm]:h-9 md:data-[size=sm]:h-7",
+                        "min-w-0 flex-1 data-[size=sm]:h-9 md:flex-none md:data-[size=sm]:h-7",
                         // Shares the divider with the status filter beside it.
                         showStatusFilter && "-ml-px rounded-l-none"
                       )}
@@ -391,7 +393,7 @@ export function TaskList({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-9 flex-1 min-[420px]:ml-auto min-[420px]:flex-none md:ml-0 md:h-7"
+                  className="h-9 grow basis-auto md:grow-0 md:h-7"
                   onClick={() => setSelectionMode(true)}
                 >
                   <ListChecks className="size-3.5" /> Select
@@ -399,7 +401,7 @@ export function TaskList({
                 {newTask && (
                   <Button
                     size="sm"
-                    className="h-9 flex-1 min-[420px]:flex-none md:h-7"
+                    className="h-9 grow basis-auto md:grow-0 md:h-7"
                     onClick={openNew}
                   >
                     <Plus className="size-3.5" /> New task
