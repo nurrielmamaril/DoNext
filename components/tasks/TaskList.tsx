@@ -44,6 +44,24 @@ type TaskRow = Database["public"]["Tables"]["tasks"]["Row"] & {
 
 type SortKey = "position" | "due_date" | "priority" | "status" | "created_at";
 
+const sortLabels: Record<SortKey, string> = {
+  position: "Default order",
+  due_date: "Due date",
+  priority: "Priority",
+  status: "Status",
+  created_at: "Date created",
+};
+
+// What the sort control shows in a narrow window. The full wording is still
+// in the menu; on the button it would eat the width the other controls need.
+const sortLabelsShort: Record<SortKey, string> = {
+  position: "Default",
+  due_date: "Due date",
+  priority: "Priority",
+  status: "Status",
+  created_at: "Created",
+};
+
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, low: 2 };
 const statusRank: Record<string, number> = {
   not_started: 0,
@@ -314,7 +332,7 @@ export function TaskList({
                   arranged, does this wrap back to two rows. md:contents
                   dissolves the wrapper on desktop, one flat row anyway. */}
               <div className="flex min-w-0 flex-wrap gap-2 md:contents">
-                <div className="flex min-w-0 flex-1 basis-full min-[420px]:basis-0 md:flex-none">
+                <div className="flex min-w-0 flex-1 basis-full min-[420px]:flex-none min-[420px]:basis-auto">
                   {showStatusFilter && (
                     <Select
                       items={{ active: "Active", completed: "Completed", all: "All" }}
@@ -339,13 +357,7 @@ export function TaskList({
                     </Select>
                   )}
                   <Select
-                    items={{
-                      position: "Default order",
-                      due_date: "Due date",
-                      priority: "Priority",
-                      status: "Status",
-                      created_at: "Date created",
-                    }}
+                    items={sortLabels}
                     value={sortKey}
                     onValueChange={(v) => {
                       setSortKey(v as SortKey);
@@ -355,36 +367,34 @@ export function TaskList({
                     <SelectTrigger
                       size="sm"
                       className={cn(
-                        // Takes whatever is left of the row in a narrow
-                        // window; the status filter keeps its own width.
-                        "min-w-0 flex-1 data-[size=sm]:h-9 md:flex-none md:data-[size=sm]:h-7",
+                        "min-w-0 shrink data-[size=sm]:h-9 md:data-[size=sm]:h-7",
                         // Shares the divider with the status filter beside it.
                         showStatusFilter && "-ml-px rounded-l-none"
                       )}
                     >
                       <ArrowUpDown className="size-3.5 text-muted-foreground" />
-                      <SelectValue />
+                      {/* Its own label rather than SelectValue: in a narrow
+                          window it shows the short form, so the row keeps
+                          room for the buttons' labels. */}
+                      <span className="truncate md:hidden">{sortLabelsShort[sortKey]}</span>
+                      <span className="hidden truncate md:inline">{sortLabels[sortKey]}</span>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="position">Default order</SelectItem>
-                      <SelectItem value="due_date">Due date</SelectItem>
-                      <SelectItem value="priority">Priority</SelectItem>
-                      <SelectItem value="status">Status</SelectItem>
-                      <SelectItem value="created_at">Date created</SelectItem>
+                      {Object.entries(sortLabels).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
-                {/* In the band where the row is tight, this label gives way so
-                    the filters keep theirs; the icon carries it there. */}
                 <Button
                   size="sm"
                   variant="outline"
-                  aria-label="Select tasks"
-                  className="h-9 flex-1 min-[420px]:flex-none md:h-7"
+                  className="h-9 flex-1 min-[420px]:ml-auto min-[420px]:flex-none md:ml-0 md:h-7"
                   onClick={() => setSelectionMode(true)}
                 >
-                  <ListChecks className="size-3.5" />
-                  <span className="hidden max-[419px]:inline md:inline">Select</span>
+                  <ListChecks className="size-3.5" /> Select
                 </Button>
                 {newTask && (
                   <Button
