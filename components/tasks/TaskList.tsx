@@ -306,14 +306,15 @@ export function TaskList({
               {/* The two filters are one decision about what the list shows,
                   so they sit in a single segmented control rather than as two
                   more boxes competing with the buttons next to them.
-                  Everything stays on one line at every width — the app is
-                  often kept in a narrow window beside other work, where a
-                  second row of controls costs more than it is worth. The
-                  filters take whatever width is left and clip their own
-                  labels; the buttons keep theirs. md:contents dissolves this
-                  wrapper on desktop, where it is one flat row anyway. */}
+                  They stay on one line down to a narrow window — the app is
+                  often kept in a column beside other work, where a second row
+                  of controls above every list costs more than it is worth.
+                  The sort filter takes whatever is left of the row. Only
+                  under 420px, which no longer fits them however they are
+                  arranged, does this wrap back to two rows. md:contents
+                  dissolves the wrapper on desktop, one flat row anyway. */}
               <div className="flex min-w-0 flex-wrap gap-2 md:contents">
-                <div className="flex min-w-0 flex-1 basis-full min-[480px]:basis-auto md:flex-none">
+                <div className="flex min-w-0 flex-1 basis-full min-[420px]:basis-0 md:flex-none">
                   {showStatusFilter && (
                     <Select
                       items={{ active: "Active", completed: "Completed", all: "All" }}
@@ -327,7 +328,7 @@ export function TaskList({
                         size="sm"
                         className="shrink-0 rounded-r-none data-[size=sm]:h-9 md:data-[size=sm]:h-7"
                       >
-                        <ListFilter className="size-3.5 text-muted-foreground" />
+                        <ListFilter className="hidden size-3.5 text-muted-foreground md:block" />
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -379,16 +380,16 @@ export function TaskList({
                   size="sm"
                   variant="outline"
                   aria-label="Select tasks"
-                  className="h-9 flex-1 min-[480px]:flex-none md:h-7"
+                  className="h-9 flex-1 min-[420px]:flex-none md:h-7"
                   onClick={() => setSelectionMode(true)}
                 >
                   <ListChecks className="size-3.5" />
-                  <span className="hidden max-[479px]:inline md:inline">Select</span>
+                  <span className="hidden max-[419px]:inline md:inline">Select</span>
                 </Button>
                 {newTask && (
                   <Button
                     size="sm"
-                    className="h-9 flex-1 min-[480px]:flex-none md:h-7"
+                    className="h-9 flex-1 min-[420px]:flex-none md:h-7"
                     onClick={openNew}
                   >
                     <Plus className="size-3.5" /> New task
