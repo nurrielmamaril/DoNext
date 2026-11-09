@@ -117,7 +117,7 @@ export function NotesPanel({
             <h2 className="font-heading text-xl">{title}</h2>
             {/* Same hierarchy as the task lists above: the filters and Select
                 stay quiet, the one that adds something is the solid button. */}
-            <div className="flex items-center gap-2 *:flex-1 md:*:flex-none">
+            <div className="flex items-center justify-end gap-2">
               <Button
                 size="sm"
                 variant="outline"
